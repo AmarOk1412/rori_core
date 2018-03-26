@@ -1,0 +1,6 @@
+
+/target/
+**/*.rs.bk
+rori.db
+config.json
+Cargo.lock
