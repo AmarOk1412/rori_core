@@ -42,6 +42,7 @@ pub struct Server {
     ring_dbus: &'static str,
     configuration_path: &'static str,
     configuration_iface: &'static str,
+    id_to_account_linker: Vec<(String, String, bool)>
 }
 
 impl Server {
@@ -54,6 +55,7 @@ impl Server {
             ring_dbus: "cx.ring.Ring",
             configuration_path: "/cx/ring/Ring/ConfigurationManager",
             configuration_iface: "cx.ring.Ring.ConfigurationManager",
+            id_to_account_linker: Vec::new()
         }
     }
 
@@ -155,6 +157,15 @@ impl Server {
                 self.try_unregister(&interaction.author_ring_id);
             }
         }
+        if interaction.body.starts_with("/link") {
+            let split: Vec<&str> = interaction.body.split(' ').collect();
+            if split.len() < 2 {
+                warn!("link received, but no argument detected");
+                return;
+            }
+            self.try_link_new_device(&interaction.author_ring_id,
+                                     &String::from(*split.get(1).unwrap()));
+        }
     }
 
     pub fn load_users(&mut self, users: Vec<(String, String, String)>) {
@@ -214,6 +225,72 @@ impl Server {
         let dbus = conn.unwrap();
         let _ = dbus.send_with_reply_and_block(
             dbus_msg.unwrap().append2(account_id, from), 2000).unwrap();
+    }
+
+    fn try_link_new_device(&mut self, from_id: &String, argument: &String) {
+        let account_id = self.account.id.clone();
+        let (from_id, from_user, _) = Database::get_user(from_id);
+        let mut do_push = true;
+        let mut do_clean = false;
+        let linked_id : String;
+        let linked_user : String;
+        if from_user.len() == 0 {
+            linked_id = from_id.clone();
+            linked_user = argument.clone();
+            // unknown want to be connected as user.
+            for (id, account, authentified) in self.id_to_account_linker.clone() {
+                if id == from_id && account == *argument {
+                    do_push = false;
+                    if  authentified {
+                        do_clean = true;
+                        let msg = format!("{} linked to {}", from_id, argument);
+                        info!("{}", msg);
+                        self.move_ring_to_user(&id, &account);
+                        self.send_interaction(&*account_id, &*id, &*msg);
+                        break;
+                    }
+                }
+            }
+        } else {
+            linked_id = argument.clone();
+            linked_user = from_user.clone();
+            // known user want a new device
+            for (id, account, authentified) in self.id_to_account_linker.clone() {
+                if id == *argument && account == from_user {
+                    do_push = false;
+                    if !authentified {
+                        do_clean = true;
+                        let msg = format!("{} linked to {}", argument, from_user);
+                        info!("{}", msg);
+                        self.move_ring_to_user(&id, &account);
+                        self.send_interaction(&*account_id, &*id, &*msg);
+                        break;
+                    }
+                }
+            }
+        }
+        if do_push {
+            info!("{} wants to be linked to {}", linked_id, linked_user);
+            self.id_to_account_linker.push((linked_id.clone(), linked_user.clone(), from_user.len() != 0));
+        }
+        if do_clean {
+            while let Some(index) = self.id_to_account_linker.iter().position(|i| i.0 == *linked_id && i.1 == *linked_user) {
+                self.id_to_account_linker.remove(index);
+            }
+        }
+    }
+
+    fn move_ring_to_user(&mut self, ring_id: &String, username: &String) {
+        // Remove from anonymous_user
+        let index = self.anonymous_user.devices.iter().position(|d| d.ring_id == *ring_id).unwrap();
+        self.anonymous_user.devices.remove(index);
+        // Update device for user
+        for registered in &mut self.registered_users {
+            if registered.name == *username {
+                registered.devices.push(Device::new(ring_id));
+            }
+        }
+        let _ = Database::update_username(ring_id, username);
     }
 
     fn try_register_username(&mut self, ring_id: &String, username: &String) {
