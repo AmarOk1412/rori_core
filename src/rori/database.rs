@@ -72,6 +72,17 @@ impl Database {
         users
     }
 
+    pub fn get_user(ring_id: &String) -> (String, String, String) {
+        let conn = rusqlite::Connection::open("rori.db").unwrap();
+        let mut stmt = conn.prepare("SELECT ring_id, username, devicename  FROM users WHERE ring_id=:ring_id").unwrap();
+        let mut rows = stmt.query_named(&[(":ring_id", ring_id)]).unwrap();
+        while let Some(row) = rows.next() {
+            let row = row.unwrap();
+            return (row.get(0), row.get(1), row.get(2));
+        }
+        (String::new(), String::new(), String::new())
+    }
+
     pub fn remove_user(ring_id: &String) -> Result<i32, rusqlite::Error> {
         let conn = rusqlite::Connection::open("rori.db").unwrap();
         let mut conn = conn.prepare("DELETE FROM users WHERE ring_id=:ring_id").unwrap();
@@ -85,6 +96,16 @@ impl Database {
         let conn = rusqlite::Connection::open("rori.db").unwrap();
         let mut stmt = conn.prepare("SELECT * FROM users WHERE username=:username").unwrap();
         let mut rows = stmt.query_named(&[(":username", username)]).unwrap();
+        while let Some(_) = rows.next() {
+            return true;
+        }
+        false
+    }
+
+    pub fn search_ring_id(ring_id: &String) -> bool {
+        let conn = rusqlite::Connection::open("rori.db").unwrap();
+        let mut stmt = conn.prepare("SELECT * FROM users WHERE ring_id=:ring_id").unwrap();
+        let mut rows = stmt.query_named(&[(":ring_id", ring_id)]).unwrap();
         while let Some(_) = rows.next() {
             return true;
         }

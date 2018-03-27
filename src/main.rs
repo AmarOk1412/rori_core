@@ -71,7 +71,8 @@ fn main() {
     let test = thread::spawn(move || {
         Manager::handle_signals(shared_manager_cloned);
     });
-    let mut api = API::new(shared_manager);
+    let mut api = API::new(shared_manager,
+                           String::from(config["api_listener"].as_str().unwrap_or("")));
     api.start();
     let _ = test.join();
     // TODO proper quit

@@ -135,10 +135,22 @@ impl Server {
                    warn!("add_device received, but no device detected");
                    return;
                }
-               self.try_register_device(&interaction.author_ring_id, &username,
+               let mut device_to_add = interaction.author_ring_id.clone();
+               if split.len() == 3 && split.last().unwrap_or(&"").len() > 0 {
+                   device_to_add = split.last().unwrap_or(&"").to_string();
+               }
+               if !Database::search_ring_id(&device_to_add) {
+                   self.add_contact(&*self.account.id, &device_to_add);
+               }
+               self.try_register_device(&interaction.author_ring_id, &device_to_add, &username,
                                           &String::from(*split.get(1).unwrap()));
             } else if interaction.body.starts_with("/rm_device") {
-                self.try_remove_device(&interaction.author_ring_id);
+                let mut device_to_remove = interaction.author_ring_id.clone();
+                let split: Vec<&str> = interaction.body.split(' ').collect();
+                if split.len() == 2 && split.last().unwrap_or(&"").len() > 0 {
+                    device_to_remove = split.last().unwrap_or(&"").to_string();
+                }
+                self.try_remove_device(&interaction.author_ring_id, &device_to_remove);
             } else if interaction.body.starts_with("/unregister") {
                 self.try_unregister(&interaction.author_ring_id);
             }
@@ -235,8 +247,17 @@ impl Server {
         }
     }
 
-    fn try_register_device(&mut self, ring_id: &String, username: &String, devicename: &String) {
+    fn try_register_device(&mut self, from_id: &String, ring_id: &String, username: &String, devicename: &String) {
         let id = self.account.id.clone();
+        let (from_id, from_user, _) = Database::get_user(from_id);
+        let (mod_id, mod_user, _) = Database::get_user(ring_id);
+        if from_user != &*mod_user {
+            let err = format!("!!!!!{} trying to register device with different user ({}) ", from_id, mod_id);
+            warn!("{}", err);
+            self.send_interaction(&*id, &*from_id, &*err);
+            self.send_interaction(&*id, &*mod_id, &*err);
+            return;
+        }
         if Database::search_devicename(username, devicename) {
             let err = format!("registering {} for {} failed because devicename was found", devicename, ring_id);
             warn!("{}", err);
@@ -258,19 +279,28 @@ impl Server {
                     // And inform user
                     let msg = format!("{} is now known as {}_{}", ring_id, username, devicename);
                     info!("{}", msg);
-                    self.send_interaction(&*id, ring_id, &*msg);
+                    self.send_interaction(&*id, &*from_id, &*msg);
                 },
                 _ => {
                     let err = format!("registering {} for {} failed when updating db", devicename, ring_id);
                     warn!("{}", err);
-                    self.send_interaction(&*id, ring_id, &*err);
+                    self.send_interaction(&*id, &*from_id, &*err);
                 }
             }
         }
     }
 
-    fn try_remove_device(&mut self, ring_id: &String) {
+    fn try_remove_device(&mut self, from_id: &String, ring_id: &String) {
         let id = self.account.id.clone();
+        let (from_id, from_user, _) = Database::get_user(from_id);
+        let (mod_id, mod_user, _) = Database::get_user(ring_id);
+        if from_user != &*mod_user {
+            let err = format!("!!!!!{} trying to revoke device with different user ({}) ", from_id, mod_id);
+            warn!("{}", err);
+            self.send_interaction(&*id, &*from_id, &*err);
+            self.send_interaction(&*id, &*mod_id, &*err);
+            return;
+        }
         let mut success = false;
         for registered in &mut self.registered_users {
             for device in &mut registered.devices {

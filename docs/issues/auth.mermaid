@@ -23,10 +23,12 @@ sequenceDiagram
     Note right of RORI: test to register alice
     RORI->>Alice_android: err (already registered)
     Note left of Alice_android: alice_pc is still anonymous
-    Alice_pc->>RORI:  /add_device pc
+    Alice_android->>RORI:  /add_device pc
     Note right of RORI: ignore,<br>because anonymous
-  
+
     Alice_pc->>RORI:  /link Alice_android (ring id)
+    Note right of RORI: prepare to link device
+    Alice_android->>RORI:  /link alice
     Note right of RORI: add new device for alice
     RORI->>Alice_pc: ok
     Note left of Alice_android: identified as alice

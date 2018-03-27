@@ -24,7 +24,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  **/
- 
+
 use iron::prelude::*;
 use iron::Handler;
 use iron::mime::Mime;
@@ -78,9 +78,9 @@ impl Handler for NameHandler {
 }
 
 impl API {
-    pub fn new(manager: Arc<Mutex<Manager>>) -> API {
+    pub fn new(manager: Arc<Mutex<Manager>>, address: String) -> API {
         API {
-            address: String::from("0.0.0.0:1412"), // TODO change address
+            address: address,
             manager: manager
         }
     }
