@@ -25,6 +25,10 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  **/
 
+/**
+ * Represent a RORI device
+ * A device for RORI is a ring_id. This device can be linked to a specific user or to the anonymous
+ */
 #[derive(Debug, Clone)]
 pub struct Device {
     pub name: String,
@@ -32,6 +36,10 @@ pub struct Device {
 }
 
 impl Device {
+    /**
+     * Generate a new device for the given ring_id
+     * @param ring_id
+     */
     pub fn new(ring_id: &String) -> Device {
         Device {
             name: String::new(),
@@ -40,6 +48,12 @@ impl Device {
     }
 }
 
+/**
+ * Represent a RORI User
+ * A user for RORI is someone who uses the system under an identity. For example, Alice
+ * (real person) can uses her phone, her computer linked to RORI under the identity alice@rori
+ * (user for RORI) and an IRC client as an anonymous user.
+ */
 #[derive(Debug, Clone)]
 pub struct User {
     pub name: String,
@@ -47,6 +61,9 @@ pub struct User {
 }
 
 impl User {
+    /**
+     * Generate a new anonymous user
+     */
     pub fn new() -> User {
         User {
             name: String::new(),

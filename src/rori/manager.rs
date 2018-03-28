@@ -36,7 +36,7 @@ use time;
 
 /**
  * This class is used to load RORI accounts and handle signals from Ring.
- * Should be one unique instance of this and is used to access accounts informations
+ * Should be one unique instance of this and is used to access the RORI server
  */
 pub struct Manager {
     pub server: Server,
@@ -47,6 +47,11 @@ pub struct Manager {
 }
 
 impl Manager {
+    /**
+     * Init the RORI server, the database and retrieve the RING account linked
+     * @param ring_id to retrieve
+     * @return a Manager if success, else an error
+     */
     pub fn init(ring_id: &str) -> Result<Manager, &'static str> {
         Database::init_db();
         let mut manager = Manager {
@@ -94,8 +99,8 @@ impl Manager {
                     info!("New request from {}", from);
                     m.accept_request(&*account_id, &*from, true);
                     // At first, the new account is considered as anonymous
-                    // The user should send a new message to be registered to its RORI
-                    m.server.add_new_anonymous_user(&from);
+                    // The device should send a new message to be registered to its RORI
+                    m.server.add_new_anonymous_device(&from);
                 }
             };
         }
@@ -190,6 +195,46 @@ impl Manager {
     }
 
     /**
+     * Retrievee all devices
+     * @param self
+     * @param account_id related
+     * @return a Vec of devices ring_id
+     */
+    fn get_devices(&self, account_id: &str) -> Vec<String> {
+        let mut devices: Vec<String> = Vec::new();
+        let dbus_msg = Message::new_method_call(self.ring_dbus, self.configuration_path, self.configuration_iface,
+                                                "getContacts");
+        if !dbus_msg.is_ok() {
+            error!("getContacts fails. Please verify daemon's API.");
+            return devices;
+        }
+        let conn = Connection::get_private(BusType::Session);
+        if !conn.is_ok() {
+            return Vec::new();
+        }
+        let dbus = conn.unwrap();
+        let response = dbus.send_with_reply_and_block(dbus_msg.unwrap().append1(account_id), 2000).unwrap();
+        let devices_vec: Array<Dict<&str, &str, _>, _> = match response.get1() {
+            Some(details) => details,
+            None => {
+                return devices;
+            }
+        };
+        for details in devices_vec {
+            for detail in details {
+                match detail {
+                    (key, value) => {
+                        if key == "id" {
+                            devices.push(value.to_string());
+                        }
+                    }
+                }
+            }
+        }
+        devices
+    }
+
+    /**
      * Update current RORI account by handling accountsChanged signals from daemon.
      * @param self
      * @param ci
@@ -199,7 +244,7 @@ impl Manager {
         let msg = if let &ConnectionItem::Signal(ref signal) = ci { signal } else { return };
         if &*msg.interface().unwrap() != "cx.ring.Ring.ConfigurationManager" { return };
         if &*msg.member().unwrap() != "accountsChanged" { return };
-        // TODO test if RORI accounts is still enabled + still exists
+        // TODO test if RORI accounts is still exists
     }
 
     /**
@@ -265,87 +310,51 @@ impl Manager {
         Some((account_id.unwrap().to_string(), from.unwrap().to_string()))
     }
 
-
-    fn get_users(&self, account_id: &str) -> Vec<String> {
-        let mut users: Vec<String> = Vec::new();
-        let dbus_msg = Message::new_method_call(self.ring_dbus, self.configuration_path, self.configuration_iface,
-                                                "getContacts");
-        if !dbus_msg.is_ok() {
-            error!("getContacts fails. Please verify daemon's API.");
-            return users;
-        }
-        let conn = Connection::get_private(BusType::Session);
-        if !conn.is_ok() {
-            return Vec::new();
-        }
-        let dbus = conn.unwrap();
-        let response = dbus.send_with_reply_and_block(dbus_msg.unwrap().append1(account_id), 2000).unwrap();
-        let users_vec: Array<Dict<&str, &str, _>, _> = match response.get1() {
-            Some(details) => details,
-            None => {
-                return users;
-            }
-        };
-        for details in users_vec {
-            for detail in details {
-                match detail {
-                    (key, value) => {
-                        if key == "id" {
-                            users.push(value.to_string());
-                        }
-                    }
-                }
-            }
-        }
-        users
-    }
-
-
     /**
      * Synchronizes contacts between database and daemon and init account.
      * @param self
      */
     fn load_contacts(&mut self) {
-        let mut db_users = Database::get_users();
-        let ring_users = self.get_users(&*self.server.account.id);
+        let mut db_devices = Database::get_devices();
+        let ring_devices = self.get_devices(&*self.server.account.id);
 
-        // Remove non existing users
+        // Remove non existing devices
         let mut idx: usize = 0;
-        for user in db_users.clone() {
-            match ring_users.iter().position(|c| c == &*user.0) {
+        for device in db_devices.clone() {
+            match ring_devices.iter().position(|c| c == &*device.0) {
                 Some(_) => {
                     idx += 1;
                 },
                 None => {
-                    info!("{} found in db but not from daemon, update db.", user.0);
-                    db_users.remove(idx);
-                    match Database::remove_user(&user.0) {
+                    info!("{} found in db but not from daemon, update db.", device.0);
+                    db_devices.remove(idx);
+                    match Database::remove_device(&device.0) {
                         Ok(_) => {}
                         _ => {
-                            error!("Failed to remove {} from database", user.0);
+                            error!("Failed to remove {} from database", device.0);
                         }
                     }
                 }
             }
         }
 
-        // Add new users
-        for user in &ring_users {
-            match db_users.iter().position(|c| &*c.0 == &*user) {
+        // Add new devices
+        for device in &ring_devices {
+            match db_devices.iter().position(|c| &*c.0 == &*device) {
                 Some(_) => {},
                 None => {
-                    info!("{} found from daemon but not in daemon, update db.", user);
-                    db_users.push((user.clone(), String::new(), String::new()));
-                    match Database::insert_new_user(&user, &String::new(), &String::new()) {
+                    info!("{} found from daemon but not in daemon, update db.", device);
+                    db_devices.push((device.clone(), String::new(), String::new()));
+                    match Database::insert_new_device(&device, &String::new(), &String::new()) {
                         Ok(_) => {}
                         _ => {
-                            error!("Failed to insert {} from database", user);
+                            error!("Failed to insert {} from database", device);
                         }
                     }
                 }
             }
         }
 
-        self.server.load_users(db_users);
+        self.server.load_devices(db_devices);
     }
 }

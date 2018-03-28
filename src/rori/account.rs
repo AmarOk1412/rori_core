@@ -27,6 +27,9 @@
 
 use std::fmt;
 
+/**
+ * Represent a RING account, just here to store informations.
+ **/
 #[derive(Debug, Clone)]
 pub struct Account {
     pub id: String,
@@ -34,6 +37,7 @@ pub struct Account {
     pub alias: String,
     pub enabled: bool,
 }
+
 // Used for println!
 impl fmt::Display for Account {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {

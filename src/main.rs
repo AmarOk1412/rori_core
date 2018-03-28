@@ -55,6 +55,7 @@ fn main() {
 
 
     // This script load config from config.json
+    // TODO if not config, UI to create it
     let mut file = File::open("config.json").ok()
         .expect("Config file not found");
     let mut config = String::new();
@@ -77,7 +78,4 @@ fn main() {
     let _ = test.join();
     // TODO proper quit
     // TODO ncurses for UI
-    // TODO comments
-    // TODO README
-    // TODO License
 }

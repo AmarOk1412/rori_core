@@ -28,6 +28,10 @@
 use std::fmt;
 use time::Tm;
 
+/**
+ * Represent a RING interaction, just here to store informations.
+ * NOTE: need a type attribute in the future.
+ **/
 #[derive(Clone)]
 pub struct Interaction
 {
@@ -35,6 +39,7 @@ pub struct Interaction
     pub body: String,
     pub time: Tm
 }
+
 // Used for println!
 impl fmt::Display for Interaction {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
