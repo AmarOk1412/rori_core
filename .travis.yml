@@ -1,0 +1,11 @@
+language: rust
+rust:
+  - stable
+  - nightly
+sudo: true
+install:
+  - sudo apt-get install -y libdbus-1-dev
+  - rustc -V
+script:
+  - cargo build
+  - cargo test
