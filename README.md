@@ -76,3 +76,5 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ## Contribute
 
 Please, feel free to contribute to this project in submitting patches, corrections, opening issues, etc.
+
+If you don't know what you can do, you can look the [good-first-issue](https://github.com/AmarOk1412/rori_core/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue) label, or still creates modules

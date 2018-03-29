@@ -7,7 +7,6 @@ authors = ["Sébastien Blin <sebastien.blin@savoirfairelinux.com>"]
 [dependencies]
 dbus = "0.6.1" # requirements libdbus
 iron = "*"
-lazy_static = "*"
 log = "*" # 0.4.1 latest tested
 env_logger = "*" # 0.5.4 latest tested
 reqwest = "*"
@@ -25,4 +24,4 @@ features = ["wide"]
 
 # For testing
 [lib]
-name = "main"
+name = "core"

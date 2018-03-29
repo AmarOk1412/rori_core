@@ -1,4 +1,4 @@
-extern crate main;
+extern crate core;
 
 #[cfg(test)]
 mod tests_api {

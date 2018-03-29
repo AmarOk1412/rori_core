@@ -83,7 +83,7 @@ impl Manager {
         dbus_listener.add_match("interface=cx.ring.Ring.ConfigurationManager,member=accountsChanged").unwrap();
         dbus_listener.add_match("interface=cx.ring.Ring.ConfigurationManager,member=registrationStateChanged").unwrap();
         // For each signals, call handlers.
-        for i in dbus_listener.iter(1) {
+        for i in dbus_listener.iter(100) {
             let mut m = manager.lock().unwrap();
             m.handle_accounts_signals(&i);
             m.handle_registration_changed(&i);
@@ -245,6 +245,7 @@ impl Manager {
         if &*msg.interface().unwrap() != "cx.ring.Ring.ConfigurationManager" { return };
         if &*msg.member().unwrap() != "accountsChanged" { return };
         // TODO test if RORI accounts is still exists
+        println!("ACCOUNTS CHANGED");
     }
 
     /**
