@@ -71,17 +71,18 @@ impl Server {
      * @param self
      * @param ring_id device to add
      */
-    pub fn add_new_anonymous_device(&mut self, ring_id: &String) {
+    pub fn add_new_anonymous_device(&mut self, ring_id: &String) -> bool {
         let insert_into_db = Database::insert_new_device(ring_id, &String::new(), &String::new());
         match insert_into_db {
             Ok(_) => {}
             _ => {
                 error!("add_new_anonymous_device failed");
-                return;
+                return false;
             }
         }
         self.anonymous_user.devices.push(Device::new(&ring_id));
         info!("{} added to anonymouses", ring_id);
+        true
     }
 
     /**
