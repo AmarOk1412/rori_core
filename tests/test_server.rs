@@ -194,7 +194,7 @@ mod tests_api {
     // Scenario
     // 1. A contact send /register username
     // 2. Another contact send /register username
-    fn server_test_register() {
+    fn server_register() {
         let daemon = Arc::new(Mutex::new(Daemon::new()));
         let cloned_daemon = daemon.clone();
         let daemon_thread = thread::spawn(move|| {
@@ -250,7 +250,7 @@ mod tests_api {
     // Scenario
     // 1. A User send /add_device devicename
     // 2. A User send /add_device devicename2 where username_devicename2 is already taken
-    fn server_test_register_device() {
+    fn server_register_device() {
         let daemon = Arc::new(Mutex::new(Daemon::new()));
         let cloned_daemon = daemon.clone();
         let daemon_thread = thread::spawn(move|| {
@@ -324,7 +324,7 @@ mod tests_api {
     // Scenario
     // 1. A User with multiple device send /add_device devicename device2
     // 2. A User send /add_device devicename2 device_from_another_user
-    fn server_test_register_other_device() {
+    fn server_register_other_device() {
         let daemon = Arc::new(Mutex::new(Daemon::new()));
         let cloned_daemon = daemon.clone();
         let daemon_thread = thread::spawn(move|| {
@@ -358,7 +358,6 @@ mod tests_api {
         // Tars_id2 should now be recognized for Tars_pc and Atlas_id as nothing
         let mut confirmed_tars = false;
         let mut confirmed_atlas = false;
-        let hundrer_millis = Duration::from_millis(100);
         for user in &server.registered_users {
             if user.name == "Tars" {
                 for device in &user.devices {
@@ -388,7 +387,7 @@ mod tests_api {
     // Scenario
     // 1. A User revoke one device
     // 1. A User revoke its last device
-    fn server_test_remove_device() {
+    fn server_remove_device() {
         let daemon = Arc::new(Mutex::new(Daemon::new()));
         let cloned_daemon = daemon.clone();
         let daemon_thread = thread::spawn(move|| {
@@ -455,7 +454,7 @@ mod tests_api {
     // Scenario
     // 1. A User revoke one of its another device
     // 1. A User try to revoke the device of someone else
-    fn server_test_remove_other_device() {
+    fn server_remove_other_device() {
         let daemon = Arc::new(Mutex::new(Daemon::new()));
         let cloned_daemon = daemon.clone();
         let daemon_thread = thread::spawn(move|| {
@@ -508,9 +507,135 @@ mod tests_api {
         let _ = daemon_thread.join();
     }
 
-    // TODO /link alice then id
-    // TODO /link id then alice
-    // TODO /unregister
-    // TODO add scenarios
+    #[test]
+    // Scenario
+    // 1. A user authorizes another device to link
+    // 2. The other device link to this user
+    // 3. Another device ask a user to link
+    // 4. a user accepts.
+    fn server_link_device() {
+        let daemon = Arc::new(Mutex::new(Daemon::new()));
+        let cloned_daemon = daemon.clone();
+        let daemon_thread = thread::spawn(move|| {
+            Daemon::run(cloned_daemon);
+        });
+        let mut server = setup(User::new(), Vec::new());
+        server.add_new_anonymous_device(&String::from("Atlas_id1"));
+        server.add_new_anonymous_device(&String::from("Atlas_id2"));
+        server.add_new_anonymous_device(&String::from("Atlas_id3"));
+        server.handle_interaction(Interaction {
+            author_ring_id: String::from("Atlas_id1"),
+            body: String::from("/register Atlas"),
+            time: time::now()
+        });
+        assert!(server.anonymous_user.devices.len() == 2);
+        assert!(server.registered_users.len() == 1);
 
+        // Atlas_id authorizes Atlas_id2 to link
+        server.handle_interaction(Interaction {
+            author_ring_id: String::from("Atlas_id1"),
+            body: String::from("/link Atlas_id2"),
+            time: time::now()
+        });
+        assert!(server.anonymous_user.devices.len() == 2);
+        assert!(server.registered_users.first().unwrap().devices.len() == 1);
+        // Atlas_id2 link to Atlas
+        server.handle_interaction(Interaction {
+            author_ring_id: String::from("Atlas_id2"),
+            body: String::from("/link Atlas"),
+            time: time::now()
+        });
+
+        assert!(server.anonymous_user.devices.len() == 1);
+        assert!(server.anonymous_user.devices.first().unwrap().ring_id == "Atlas_id3");
+        assert!(server.registered_users.first().unwrap().devices.len() == 2);
+
+        // Atlas_id3 asks to be linked to Atlas
+        server.handle_interaction(Interaction {
+            author_ring_id: String::from("Atlas_id3"),
+            body: String::from("/link Atlas"),
+            time: time::now()
+        });
+        assert!(server.anonymous_user.devices.len() == 1);
+        assert!(server.registered_users.first().unwrap().devices.len() == 2);
+        // Atlas_id authorizes Atlas_id3 to be linked
+        server.handle_interaction(Interaction {
+            author_ring_id: String::from("Atlas_id1"),
+            body: String::from("/link Atlas_id3"),
+            time: time::now()
+        });
+        assert!(server.anonymous_user.devices.len() == 0);
+
+        // This should has sent 3 messages
+        let mut idx_signal = 0;
+        let hundrer_millis = Duration::from_millis(100);
+        while idx_signal < 10 {
+            let storage = daemon.lock().unwrap().storage.clone();
+            let has_new_info = storage.lock().unwrap().new_info.load(Ordering::SeqCst);
+            if has_new_info {
+                let interactions = storage.lock().unwrap().interactions_sent.clone();
+                assert!(interactions.len() == 3);
+                break;
+            }
+            thread::sleep(hundrer_millis);
+            idx_signal += 1;
+            if idx_signal == 10 {
+                panic!("interactions not set!");
+            }
+        }
+
+        teardown();
+        daemon.lock().unwrap().stop();
+        let _ = daemon_thread.join();
+    }
+
+    #[test]
+    // Scenario
+    // 1. A user unregister himself with multiple devices
+    fn server_unregister() {
+        let daemon = Arc::new(Mutex::new(Daemon::new()));
+        let cloned_daemon = daemon.clone();
+        let daemon_thread = thread::spawn(move|| {
+            Daemon::run(cloned_daemon);
+        });
+        let mut atlas = User::new();
+        atlas.name = String::from("Atlas");
+        atlas.devices.push(Device::new(&String::from("Atlas_id1")));
+        atlas.devices.push(Device::new(&String::from("Atlas_id2")));
+        let mut users = Vec::new();
+        users.push(atlas);
+        let mut server = setup(User::new(), users);
+        assert!(server.registered_users.len() == 1);
+        assert!(server.registered_users.first().unwrap().devices.len() == 2);
+
+        // Atlas_id1 unregister user.
+        server.handle_interaction(Interaction {
+            author_ring_id: String::from("Atlas_id1"),
+            body: String::from("/unregister"),
+            time: time::now()
+        });
+        assert!(server.anonymous_user.devices.len() == 2);
+        assert!(server.registered_users.len() == 0);
+
+        // This should has sent 1 message
+        let mut idx_signal = 0;
+        let hundrer_millis = Duration::from_millis(100);
+        while idx_signal < 10 {
+            let storage = daemon.lock().unwrap().storage.clone();
+            let has_new_info = storage.lock().unwrap().new_info.load(Ordering::SeqCst);
+            if has_new_info {
+                let interactions = storage.lock().unwrap().interactions_sent.clone();
+                assert!(interactions.len() == 1);
+                break;
+            }
+            thread::sleep(hundrer_millis);
+            idx_signal += 1;
+            if idx_signal == 10 {
+                panic!("interactions not set!");
+            }
+        }
+        teardown();
+        daemon.lock().unwrap().stop();
+        let _ = daemon_thread.join();
+    }
 }
