@@ -31,6 +31,8 @@ use rori::account::Account;
 use rori::database::Database;
 use rori::interaction::Interaction;
 use rori::server::Server;
+use std::collections::HashMap;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use time;
 
@@ -61,7 +63,11 @@ impl Manager {
             configuration_path: "/cx/ring/Ring/ConfigurationManager",
             configuration_iface: "cx.ring.Ring.ConfigurationManager",
         };
-        manager.server.account = manager.build_account(ring_id);
+        manager.server.account = Manager::build_account(ring_id);
+        if !manager.server.account.enabled {
+            info!("{} was not enabled. Enable it", ring_id);
+            manager.enable_account();
+        }
         debug!("Get: {}", manager.server.account.ring_id);
         if manager.server.account.ring_id == "" {
             return Err("Cannot build RORI account, please check configuration");
@@ -75,7 +81,7 @@ impl Manager {
      * Listen from interresting signals from dbus and call handlers
      * @param self
      */
-    pub fn handle_signals(manager: Arc<Mutex<Manager>>) {
+    pub fn handle_signals(manager: Arc<Mutex<Manager>>, stop: Arc<AtomicBool>) {
         // Use another dbus connection to listen signals.
         let dbus_listener = Connection::get_private(BusType::Session).unwrap();
         dbus_listener.add_match("interface=cx.ring.Ring.ConfigurationManager,member=incomingAccountMessage").unwrap();
@@ -103,7 +109,80 @@ impl Manager {
                     m.server.add_new_anonymous_device(&from);
                 }
             };
+            if stop.load(Ordering::SeqCst) {
+                break;
+            }
         }
+    }
+
+    // Helpers
+
+    /**
+     * Add a RING account
+     * @param main_info path or alias
+     * @param password
+     * @param from_archive if main_info is a path
+     */
+    pub fn add_account(main_info: &str, password: &str, from_archive: bool) {
+        let mut details: HashMap<&str, &str> = HashMap::new();
+        if from_archive {
+            details.insert("Account.archivePath", main_info);
+        } else {
+            details.insert("Account.alias", main_info);
+        }
+        details.insert("Account.type", "RING");
+        details.insert("Account.archivePassword", password);
+        let details = Dict::new(details.iter());
+        let dbus_msg = Message::new_method_call("cx.ring.Ring", "/cx/ring/Ring/ConfigurationManager",
+                                                "cx.ring.Ring.ConfigurationManager",
+                                                "addAccount");
+        if !dbus_msg.is_ok() {
+            error!("addAccount fails. Please verify daemon's API.");
+            return;
+        }
+        let conn = Connection::get_private(BusType::Session);
+        if !conn.is_ok() {
+            return;
+        }
+        let dbus = conn.unwrap();
+        let response = dbus.send_with_reply_and_block(dbus_msg.unwrap()
+                                                                .append1(details), 2000).unwrap();
+        // addAccount returns one argument, which is a string.
+        let account_added: &str  = match response.get1() {
+            Some(account) => account,
+            None => ""
+        };
+        info!("New account: {:?}", account_added);
+    }
+
+    /**
+     * Get current ring accounts
+     * @return current accounts
+     */
+    pub fn get_account_list() -> Vec<Account> {
+        let mut account_list: Vec<Account> = Vec::new();
+        let dbus_msg = Message::new_method_call("cx.ring.Ring", "/cx/ring/Ring/ConfigurationManager",
+                                                "cx.ring.Ring.ConfigurationManager",
+                                                "getAccountList");
+        if !dbus_msg.is_ok() {
+            error!("getAccountList fails. Please verify daemon's API.");
+            return account_list;
+        }
+        let conn = Connection::get_private(BusType::Session);
+        if !conn.is_ok() {
+            return account_list;
+        }
+        let dbus = conn.unwrap();
+        let response = dbus.send_with_reply_and_block(dbus_msg.unwrap(), 2000).unwrap();
+        // getAccountList returns one argument, which is an array of strings.
+        let accounts: Array<&str, _>  = match response.get1() {
+            Some(array) => array,
+            None => return account_list
+        };
+        for account in accounts {
+            account_list.push(Manager::build_account(account));
+        }
+        account_list
     }
 
 // Private stuff
@@ -118,7 +197,8 @@ impl Manager {
      */
     fn accept_request(&self, account_id: &str, from: &str, accept: bool) -> bool {
         let method = if accept {"acceptTrustRequest"} else {"discardTrustRequest"};
-        let dbus_msg = Message::new_method_call(self.ring_dbus, self.configuration_path, self.configuration_iface,
+        let dbus_msg = Message::new_method_call(self.ring_dbus, self.configuration_path,
+                                                self.configuration_iface,
                                                 method);
         if !dbus_msg.is_ok() {
             error!("method call fails. Please verify daemon's API.");
@@ -146,13 +226,12 @@ impl Manager {
 
     /**
      * Build a new account with an id from the daemon
-     * @param self
      * @param id the account id to build
      * @return the account retrieven
      */
-    fn build_account(&self, id: &str) -> Account {
-        let dbus_msg = Message::new_method_call(self.ring_dbus, self.configuration_path,
-                                                self.configuration_iface,
+    fn build_account(id: &str) -> Account {
+        let dbus_msg = Message::new_method_call("cx.ring.Ring", "/cx/ring/Ring/ConfigurationManager",
+                                                "cx.ring.Ring.ConfigurationManager",
                                                 "getAccountDetails");
         if !dbus_msg.is_ok() {
             error!("getAccountDetails fails. Please verify daemon's API.");
@@ -195,6 +274,27 @@ impl Manager {
     }
 
     /**
+     * Enable a Ring account
+     * @param self
+     */
+    pub fn enable_account(&self) {
+        let dbus_msg = Message::new_method_call(self.ring_dbus, self.configuration_path,
+                                                self.configuration_iface,
+                                                "sendRegister");
+        if !dbus_msg.is_ok() {
+            error!("sendRegister call fails. Please verify daemon's API.");
+            return;
+        }
+        let conn = Connection::get_private(BusType::Session);
+        if !conn.is_ok() {
+            return;
+        }
+        let dbus = conn.unwrap();
+        let _ = dbus.send_with_reply_and_block(
+            dbus_msg.unwrap().append2(self.server.account.id.clone(), true), 2000);
+    }
+
+    /**
      * Retrievee all devices
      * @param self
      * @param account_id related
@@ -202,7 +302,8 @@ impl Manager {
      */
     fn get_devices(&self, account_id: &str) -> Vec<String> {
         let mut devices: Vec<String> = Vec::new();
-        let dbus_msg = Message::new_method_call(self.ring_dbus, self.configuration_path, self.configuration_iface,
+        let dbus_msg = Message::new_method_call(self.ring_dbus, self.configuration_path,
+                                                self.configuration_iface,
                                                 "getContacts");
         if !dbus_msg.is_ok() {
             error!("getContacts fails. Please verify daemon's API.");

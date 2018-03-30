@@ -477,7 +477,7 @@ impl Server {
             if success {
                 // Update devices
                 registered.devices.remove(idx);
-                if (registered.devices.len() == 0) {
+                if registered.devices.len() == 0 {
                     remove_user = true;
                 }
                 self.anonymous_user.devices.push(Device::new(ring_id));
