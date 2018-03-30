@@ -200,6 +200,7 @@ impl Server {
 
     /**
      * Build users from given devices
+     * NOTE: should be in database.
      * @param self
      * @param devices to process
      */
@@ -460,6 +461,8 @@ impl Server {
         }
         // Remove the device
         let mut success = false;
+        let mut remove_user = false;
+        let mut user_idx = 0;
         for registered in &mut self.registered_users {
             let mut idx = 0;
             for device in &mut registered.devices {
@@ -474,9 +477,16 @@ impl Server {
             if success {
                 // Update devices
                 registered.devices.remove(idx);
+                if (registered.devices.len() == 0) {
+                    remove_user = true;
+                }
                 self.anonymous_user.devices.push(Device::new(ring_id));
                 break;
             }
+            user_idx += 1;
+        }
+        if remove_user {
+            self.registered_users.remove(user_idx);
         }
         // And inform user
         let mut msg = format!("{} device revokation failed", ring_id);

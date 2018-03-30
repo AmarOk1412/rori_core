@@ -16,4 +16,4 @@ run:
 	RUST_BACKTRACE=1 RUST_LOG=info cargo run
 
 test:
-	RUST_TEST_THREADS=1 cargo test -- --nocapture
+	RUST_TEST_THREADS=1 RUST_BACKTRACE=1 cargo test -- --nocapture

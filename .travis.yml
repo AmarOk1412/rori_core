@@ -6,6 +6,10 @@ sudo: true
 install:
   - sudo apt-get install -y libdbus-1-dev
   - rustc -V
+before_script:
+  - "export DISPLAY=:99.0"
+  - "sh -e /etc/init.d/xvfb start"
+  - sleep 3 # give xvfb some time to start
 script:
   - cargo build
   - RUST_TEST_THREADS=1 cargo test -- --nocapture
