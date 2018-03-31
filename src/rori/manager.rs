@@ -245,7 +245,7 @@ impl Manager {
         let dbus = conn.unwrap();
         let response = dbus.send_with_reply_and_block(
                                            dbus_msg.unwrap().append1(id), 2000
-                                       ).unwrap();
+                                       ).ok().expect("Is the ring-daemon launched?");
         let details: Dict<&str, &str, _> = match response.get1() {
             Some(details) => details,
             None => {

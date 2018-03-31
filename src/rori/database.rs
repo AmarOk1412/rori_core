@@ -52,6 +52,16 @@ impl Database {
                 username    TEXT,
                 devicename  TEXT
                 )", &[]).unwrap();
+            conn.execute("CREATE TABLE modules (
+                id          INTEGER PRIMARY KEY,
+                name        TEXT,
+                priority    INTEGER,
+                enabled     BOOLEAN,
+                type        TEXT,
+                condition   TEXT,
+                path        TEXT,
+                metadatas   TEXT
+                )", &[]).unwrap();
             conn.execute("PRAGMA user_version = 1", &[]).unwrap();
         }
         info!("database ready");
