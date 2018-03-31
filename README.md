@@ -42,7 +42,7 @@ Please, see [wiki](https://github.com/AmarOk1412/rori_core/wiki/)
 ## Run your instance
 
 For now, there is no documentation to do that. Neither tools. Will come.
-(But you still can clone and make a `cargo run`. I can help you). You will need a `config.json` file like:
+(But you still can clone and make a `cargo run`. I can help you). You will need a `config.json` file like (or let the software write this file for you):
 ```
 {
   "ring_id":"xxxxxxxxxxxxxxxx",
@@ -83,4 +83,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 Please, feel free to contribute to this project in submitting patches, corrections, opening issues, etc.
 
-If you don't know what you can do, you can look the [good-first-issue](https://github.com/AmarOk1412/rori_core/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue) label, or still creates modules
+If you don't know what you can do, you can look the [good-first-issue](https://github.com/AmarOk1412/rori_core/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22) label, or still creates modules.
+
+For more infos and ideas read `CONTRIBUTING.md` (this file doesn't exists for now) and [CODE_OF_CONDUCT.md](/CODE_OF_CONDUCT.md).
