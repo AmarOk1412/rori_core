@@ -5,7 +5,7 @@ extern crate time;
 mod mocks;
 
 #[cfg(test)]
-mod tests_api {
+mod tests_server {
     use core::rori::account::Account;
     use core::rori::database::Database;
     use core::rori::interaction::Interaction;

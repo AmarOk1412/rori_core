@@ -11,6 +11,7 @@ mod tests_manager {
     use mocks::Daemon;
     use std::fs;
     use std::sync::{Arc, Mutex};
+    use std::time::Duration;
     use std::thread;
 
     fn setup() {
@@ -32,6 +33,8 @@ mod tests_manager {
         let daemon_thread = thread::spawn(move|| {
             Daemon::run(cloned_daemon);
         });
+        let one_sec = Duration::from_millis(1000);
+        thread::sleep(one_sec);
 
         // Test an account not here = Err(_)
         let m = Manager::init("Heisenberg");
@@ -82,6 +85,8 @@ mod tests_manager {
         let daemon_thread = thread::spawn(move|| {
             Daemon::run(cloned_daemon);
         });
+        let one_sec = Duration::from_millis(1000);
+        thread::sleep(one_sec);
 
         let account_list = Manager::get_account_list();
         assert!(account_list.len() == 1);
@@ -107,6 +112,8 @@ mod tests_manager {
         let daemon_thread = thread::spawn(move|| {
             Daemon::run(cloned_daemon);
         });
+        let one_sec = Duration::from_millis(1000);
+        thread::sleep(one_sec);
         Manager::add_account("caroline.gz", "GLaDOs is a bad robot", true);
         Manager::add_account("Cave Johnson", "Chell is my daughter", false);
         let storage = daemon.lock().unwrap().storage.clone();
@@ -124,4 +131,7 @@ mod tests_manager {
         let _ = daemon_thread.join();
         teardown();
     }
+
+    // NOTE: I don't test handle_signals because it's just about interfacing signals and server.
+    // So, tests are in test_server.rs
 }
