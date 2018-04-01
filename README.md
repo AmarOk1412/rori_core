@@ -88,4 +88,4 @@ Please, feel free to contribute to this project in submitting patches, correctio
 
 If you don't know what you can do, you can look the [good-first-issue](https://github.com/AmarOk1412/rori_core/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22) label, or still creates modules.
 
-For more infos and ideas read `CONTRIBUTING.md` (this file doesn't exists for now) and [CODE_OF_CONDUCT.md](/CODE_OF_CONDUCT.md).
+For more infos and ideas read [CONTRIBUTING.md](/CONTRIBUTING.md) (this file doesn't exists for now) and [CODE_OF_CONDUCT.md](/CODE_OF_CONDUCT.md).
