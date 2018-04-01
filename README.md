@@ -45,9 +45,12 @@ For now, there is no documentation to do that. Neither tools. Will come.
 (But you still can clone and make a `cargo run`. I can help you). You will need a `config.json` file like (or let the software write this file for you):
 ```
 {
-  "ring_id":"xxxxxxxxxxxxxxxx",
-  "api_listener":"0.0.0.0:1412"
+  "ring_id":"xxxxxxxxxxxxxxxxx",
+  "api_listener":"0.0.0.0:1412",
+  "cert_path":"keys/api.p12",
+  "cert_pass":""
 }
+
 ```
 
 ## License

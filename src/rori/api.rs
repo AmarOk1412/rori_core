@@ -25,6 +25,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  **/
 
+
+use hyper_native_tls::NativeTlsServer;
 use iron::prelude::*;
 use iron::Handler;
 use iron::mime::Mime;
@@ -42,6 +44,8 @@ use std::sync::{Arc, Mutex};
  */
 pub struct API {
     address: String,
+    cert_path: String,
+    cert_pass: String,
     manager: Arc<Mutex<Manager>>
 }
 
@@ -50,11 +54,26 @@ impl API {
      * Initializes the API
      * @param manager to access to RORI informations
      * @param address where the server listens
+     * @param cert_path where the cert path is located
+     * @param cert_pass
      * @return an API structure
      */
-    pub fn new(manager: Arc<Mutex<Manager>>, address: String) -> API {
+    pub fn new(manager: Arc<Mutex<Manager>>, address: String, cert_path: String, cert_pass: String) -> API {
         API {
             address: address,
+            cert_path: cert_path,
+            cert_pass: cert_pass,
+            manager: manager
+        }
+    }
+
+
+    // Just for testing
+    pub fn new_http(manager: Arc<Mutex<Manager>>, address: String) -> API {
+        API {
+            address: address,
+            cert_path: String::new(),
+            cert_pass: String::new(),
             manager: manager
         }
     }
@@ -69,10 +88,19 @@ impl API {
         let name_handler = NameHandler {
             manager: self.manager.clone()
         };
-        router.get("/name/:name", name_handler, "name");
-        info!("start API endpoint at {}", self.address);
-        // Start router
-        Iron::new(router).http(&*self.address).unwrap();
+        if self.cert_path.len() > 0 {
+            let ssl = NativeTlsServer::new(&*self.cert_path, &*self.cert_pass).unwrap();
+            router.get("/name/:name", name_handler, "name");
+            info!("start API endpoint at {}", self.address);
+            // Start router
+            Iron::new(router).https(&*self.address, ssl).unwrap();
+        } else {
+            let mut router = Router::new();
+            router.get("/name/:name", name_handler, "name");
+            info!("start API endpoint at {}", self.address);
+            // Start router
+            Iron::new(router).http(&*self.address).unwrap();
+        }
     }
 }
 

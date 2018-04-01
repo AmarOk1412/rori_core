@@ -4,7 +4,7 @@ rust:
   - nightly
 sudo: true
 install:
-  - sudo apt-get install -y libdbus-1-dev
+  - sudo apt-get install -y libdbus-1-dev openssl
   - rustc -V
 before_script:
   - "export DISPLAY=:99.0"

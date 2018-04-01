@@ -6,8 +6,10 @@ authors = ["Sébastien Blin <sebastien.blin@savoirfairelinux.com>"]
 
 [dependencies]
 dbus = "0.6.1" # requirements libdbus
+hyper-native-tls = "*"
 iron = "*"
 log = "*" # 0.4.1 latest tested
+openssl-probe = "0.1.2"
 env_logger = "*" # 0.5.4 latest tested
 reqwest = "*"
 router = "*"

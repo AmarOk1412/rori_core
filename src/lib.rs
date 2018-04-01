@@ -27,6 +27,7 @@
 
 extern crate dbus;
 extern crate env_logger;
+extern crate hyper_native_tls;
 extern crate iron;
 #[macro_use]
 extern crate log;

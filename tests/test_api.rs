@@ -55,7 +55,8 @@ mod tests_api {
                 body: String::from("/add_device core"),
                 time: time::now()
             });
-            let mut api = API::new(m, String::from("0.0.0.0:1412"));
+            // NOTE: for simplicity, test with an http endpoint (no certificate verification to do)
+            let mut api = API::new_http(m, String::from("0.0.0.0:1412"));
             api.start();
         });
 
