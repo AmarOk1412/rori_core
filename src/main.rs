@@ -25,12 +25,14 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  **/
 
+extern crate cpython;
 extern crate dbus;
 extern crate env_logger;
 extern crate hyper_native_tls;
 extern crate iron;
 #[macro_use]
 extern crate log;
+extern crate regex;
 extern crate router;
 extern crate rusqlite;
 extern crate serde;

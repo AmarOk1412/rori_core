@@ -1,7 +1,13 @@
-
+# Rust
 /target/
 **/*.rs.bk
-rori.db
-config.json
 Cargo.lock
+
+# RORI config related
+rori.db
 keys/
+config.json
+
+# Modules related
+*.pyc
+__pycache__

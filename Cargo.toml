@@ -5,12 +5,14 @@ authors = ["Sébastien Blin <sebastien.blin@savoirfairelinux.com>"]
 
 
 [dependencies]
+cpython = "0.2.0"
 dbus = "0.6.1" # requirements libdbus
+env_logger = "*" # 0.5.4 latest tested
 hyper-native-tls = "*"
 iron = "*"
 log = "*" # 0.4.1 latest tested
 openssl-probe = "0.1.2"
-env_logger = "*" # 0.5.4 latest tested
+regex = "*"
 reqwest = "*"
 router = "*"
 rusqlite = "0.13.0"

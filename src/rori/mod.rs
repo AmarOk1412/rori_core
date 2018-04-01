@@ -27,8 +27,10 @@
 
 pub mod account;
 pub mod api;
+pub mod database;
 pub mod interaction;
 pub mod manager;
+pub mod module;
+pub mod modulemanager;
 pub mod server;
 pub mod user;
-pub mod database;
