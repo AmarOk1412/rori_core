@@ -1,10 +1,11 @@
-# from rori import *
+from rori import Interaction, Module
 import os.path
 
 def load_module(path):
     path = path.replace("/", ".")
-    if path[len(path)-1] is ".":
+    if path[len(path)-1] == ".":
         path = path[:-1]
+    # TODO pass via importlib module to avoid the exec line
     exec("import %s.module as module" % path, globals())
 
 def exec_module(path, interaction):
@@ -18,5 +19,5 @@ def exec_module(path, interaction):
         with open(path, 'r') as f:
             sentences = f.read()
     m = module.Module(sentences)
-    m.process(interaction)
+    m.process(Interaction(interaction))
     return m.continue_processing()

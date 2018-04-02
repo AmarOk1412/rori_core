@@ -139,7 +139,7 @@ impl Database {
 
     pub fn get_max_priority() -> i64 {
         let conn = rusqlite::Connection::open("rori.db").unwrap();
-        let mut stmt = conn.prepare("SELECT MAX(priority) FROM modules").unwrap();
+        let mut stmt = conn.prepare("SELECT IFNULL(MAX(priority), 0) AS MaxP FROM modules").unwrap();
         let mut rows = stmt.query(&[]).unwrap();
         while let Some(row) = rows.next() {
             let row = row.unwrap();

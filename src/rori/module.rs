@@ -44,6 +44,7 @@ impl Module {
         let locals = PyDict::new(py);
         locals.set_item(py, "sys", py.import("sys").unwrap()).unwrap();
         py.eval("sys.path.append('.')", None, Some(&locals)).unwrap();
+        py.eval("sys.path.append('./rori_modules/')", None, Some(&locals)).unwrap();
         // This will execute the linked module
         let load_module = py.import("rori_modules.load_module").unwrap();
         let interaction = serde_json::to_string(&interaction).unwrap_or(String::new());
