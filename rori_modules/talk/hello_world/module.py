@@ -5,6 +5,7 @@ from rori import DBManager, Module
 
 class Database(DBManager):
     def select_message_from_today(self, author):
+        '''get messages from today'''
         dbcur = self.conn.cursor()
         current_day = str(datetime.datetime.now()).split(' ')[0]
         today_messages = "SELECT body From History Where author_ring_id=\"{0}\" AND tm>= Datetime('{1}');".format(author, current_day)
@@ -12,6 +13,8 @@ class Database(DBManager):
 
 class Module(Module):
     def process(self, interaction):
+        '''Say hi to the devices if never seen'''
+        # TODO multidevice hi.
         alreadySeen = False
         nbSeen = 0
         for message in Database().select_message_from_today(interaction.author_ring_id):

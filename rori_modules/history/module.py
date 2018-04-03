@@ -1,9 +1,10 @@
-from rori import DBManager, Interaction, Module
 import datetime
 import random
+from rori import DBManager, Interaction, Module
 
 class Database(DBManager):
     def store_data(self, interaction):
+        '''Store an interaction into the database'''
         dbcur = self.conn.cursor()
         isMessageTableRequest = "SELECT * FROM sqlite_master WHERE name ='History' and type='table';"
         dbcur.execute(isMessageTableRequest)

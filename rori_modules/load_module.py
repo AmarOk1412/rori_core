@@ -2,6 +2,7 @@ from rori import Interaction, Module
 import os.path
 
 def load_module(path):
+    '''import a module given a path'''
     path = path.replace("/", ".")
     if path[len(path)-1] == ".":
         path = path[:-1]
@@ -9,6 +10,7 @@ def load_module(path):
     exec("import %s.module as module" % path, globals())
 
 def exec_module(path, interaction):
+    '''execute a module given a path'''
     module_path = path
     load_module(module_path)
     if path[-1] == "/":

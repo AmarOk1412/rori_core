@@ -6,6 +6,7 @@ class RORI:
         self.lang = 'en'
 
     def send_for_best_client(self, datatype, from_ring_id, content):
+        '''Send a mesage to the best device'''
         bus = dbus.SessionBus()
         configuration_mngr = bus.get_object('cx.ring.Ring', '/cx/ring/Ring/ConfigurationManager', introspect=False)
         sendTextMessage = configuration_mngr.get_dbus_method('sendTextMessage', 'cx.ring.Ring.ConfigurationManager')
@@ -17,6 +18,7 @@ class RORI:
         # NOTE ignore datatype for now.
 
     def get_localized_sentence(self, id, data):
+        '''Get translated sentence linked to a token'''
         try:
             json_data = json.loads(data)
             result = json_data[id][self.lang]

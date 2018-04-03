@@ -49,6 +49,9 @@ impl fmt::Display for Interaction {
     }
 }
 
+/**
+ * Used for serde_json
+ */
 impl Serialize for Interaction {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
         where S: Serializer

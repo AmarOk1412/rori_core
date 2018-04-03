@@ -83,6 +83,11 @@ impl Database {
         conn.execute_named(&[(":ring_id", ring_id), (":username", username), (":devicename", devicename)])
     }
 
+    /**
+     * Get enabled modules for a priority
+     * @param priority
+     * @return a vector of modules
+     */
     pub fn get_enabled_modules(priority: u64) -> Vec<Module> {
         let conn = rusqlite::Connection::open("rori.db").unwrap();
         let mut stmt = conn.prepare("SELECT name, condition, path \
@@ -137,6 +142,10 @@ impl Database {
         devices
     }
 
+    /**
+     * Return the last priority to treat
+     * @return i64
+     */
     pub fn get_max_priority() -> i64 {
         let conn = rusqlite::Connection::open("rori.db").unwrap();
         let mut stmt = conn.prepare("SELECT IFNULL(MAX(priority), 0) AS MaxP FROM modules").unwrap();
