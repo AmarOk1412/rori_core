@@ -13,8 +13,16 @@ class Database(DBManager):
             createTableRequest = "CREATE TABLE History(id INTEGER PRIMARY KEY ASC, author_ring_id TEXT, body TEXT, tm DATETIME);"
             dbcur.execute(createTableRequest)
             self.conn.commit()
-        # TODO use interaction time instead of datetime
-        addMessageRequest = "INSERT INTO History(author_ring_id, body, tm) VALUES(\"{0}\",\"{1}\",\"{2}\")".format(interaction.author_ring_id, interaction.body, str(datetime.datetime.now()))
+        time = datetime.datetime.strptime(interaction.time[:19], '%Y-%m-%dT%H:%M:%S')
+        tz = interaction.time[19:]
+        if len(tz) > 0:
+            h = int(tz[1:3])
+            m = int(tz[4:])
+            if tz[0] == '+':
+                time -= datetime.timedelta(hours=h, minutes=m)
+            else:
+                time += datetime.timedelta(hours=h, minutes=m)
+        addMessageRequest = "INSERT INTO History(author_ring_id, body, tm) VALUES(\"{0}\",\"{1}\",\"{2}\")".format(interaction.author_ring_id, interaction.body, str(time))
         dbcur.execute(addMessageRequest)
         self.conn.commit()
 

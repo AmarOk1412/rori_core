@@ -26,7 +26,6 @@
  **/
 use rori::database::Database;
 use rori::interaction::Interaction;
-use rori::module::Module;
 use std::thread;
 
 /**
@@ -52,17 +51,12 @@ impl ModuleManager {
      * @param self
      */
     pub fn process(&self) {
-        let mut priority = 0;
         let mut stop = false;
-        // TODO, get priority list
-        let max_priority = Database::get_max_priority() as u64;
-        while !stop {
+        // get_descending_priorities will skip non exisiting priorities
+        // will be something like [0, 1, 3, 4, 7...]
+        for priority in Database::get_descending_priorities() {
             // Get modules for this priority
-            let modules = Database::get_enabled_modules(priority);
-            if priority > max_priority {
-                info!("No more modules to test");
-                return;
-            }
+            let modules = Database::get_enabled_modules(priority as u64);
             // Test each modules
             let mut children = vec![];
             for module in modules {
@@ -84,7 +78,9 @@ impl ModuleManager {
                 // Wait for the thread to finish. Returns a result.
                 let _ = child.join();
             }
-            priority += 1;
+            if stop {
+                break;
+            }
         }
         info!("Stopping processing")
     }

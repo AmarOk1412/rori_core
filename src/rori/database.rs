@@ -27,7 +27,6 @@
 
 use rori::module::*;
 use rusqlite;
-use std::sync::{Arc, Mutex};
 
 /**
  * This class furnish helpers to manipulate the rori.db sqlite database
@@ -146,15 +145,16 @@ impl Database {
      * Return the last priority to treat
      * @return i64
      */
-    pub fn get_max_priority() -> i64 {
+    pub fn get_descending_priorities() -> Vec<i64> {
+        let mut result = Vec::new();
         let conn = rusqlite::Connection::open("rori.db").unwrap();
-        let mut stmt = conn.prepare("SELECT IFNULL(MAX(priority), 0) AS MaxP FROM modules").unwrap();
+        let mut stmt = conn.prepare("SELECT DISTINCT priority FROM modules ORDER BY priority ASC").unwrap();
         let mut rows = stmt.query(&[]).unwrap();
         while let Some(row) = rows.next() {
             let row = row.unwrap();
-            return row.get(0);
+            result.push(row.get(0));
         }
-        0
+        result
     }
 
     /**
