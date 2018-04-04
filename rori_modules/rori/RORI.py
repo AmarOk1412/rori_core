@@ -7,6 +7,8 @@ class RORI:
 
     def send_for_best_client(self, datatype, from_ring_id, content):
         '''Send a mesage to the best device'''
+        if len(content) == 0:
+            return
         bus = dbus.SessionBus()
         configuration_mngr = bus.get_object('cx.ring.Ring', '/cx/ring/Ring/ConfigurationManager', introspect=False)
         sendTextMessage = configuration_mngr.get_dbus_method('sendTextMessage', 'cx.ring.Ring.ConfigurationManager')

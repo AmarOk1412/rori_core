@@ -64,15 +64,14 @@ impl Database {
                 metadatas   TEXT
                 )", &[]).unwrap();
             conn.execute("CREATE TABLE emotions (
-                name     TEXT PRIMARY KEY,
-                value    INTEGER
+                username    TEXT PRIMARY KEY,
+                love        INTEGER,
+                joy         INTEGER,
+                surprise    INTEGER,
+                anger       INTEGER,
+                sadness     INTEGER,
+                fear        INTEGER
                 )", &[]).unwrap();
-                conn.execute("INSERT INTO emotions (name, value) VALUES (\"love\", 50)", &[]).unwrap();
-                conn.execute("INSERT INTO emotions (name, value) VALUES (\"joy\", 50)", &[]).unwrap();
-                conn.execute("INSERT INTO emotions (name, value) VALUES (\"surprise\", 50)", &[]).unwrap();
-                conn.execute("INSERT INTO emotions (name, value) VALUES (\"anger\", 50)", &[]).unwrap();
-                conn.execute("INSERT INTO emotions (name, value) VALUES (\"sadness\", 50)", &[]).unwrap();
-                conn.execute("INSERT INTO emotions (name, value) VALUES (\"fear\", 50)", &[]).unwrap();
             conn.execute("PRAGMA user_version = 1", &[]).unwrap();
         }
         info!("database ready");
