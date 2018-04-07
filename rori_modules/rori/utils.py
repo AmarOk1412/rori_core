@@ -17,10 +17,10 @@ class EmotionsManager:
         if username == None:
             username = ""
         # Get current emotions for this user
-        result = self.conn.execute(f'SELECT love, joy, surprise, anger, sadness, fear FROM emotions WHERE username=\"{username}\"').fetchone()
+        result = self.conn.execute('SELECT love, joy, surprise, anger, sadness, fear FROM emotions WHERE username=\"' + username + '\"').fetchone()
         if result == None:
             # Non existing, init emotions
-            self.conn.execute(f'INSERT INTO Emotions (username, love, joy, surprise, anger, sadness, fear) VALUES (\"{username}\", 50, 50, 50, 50, 50, 50)').fetchone()
+            self.conn.execute('INSERT INTO Emotions (username, love, joy, surprise, anger, sadness, fear) VALUES (\"' + username + '\", 50, 50, 50, 50, 50, 50)').fetchone()
             self.conn.commit()
             return (50, 50, 50, 50, 50, 50)
         return result
@@ -44,7 +44,7 @@ class EmotionsManager:
             csadness = min(csadness + delta, sadness) if sadness > csadness else max(csadness - delta, sadness)
         if fear != None and fear != cfear:
             cfear = min(cfear + delta, fear) if fear > cfear else max(cfear - delta, fear)
-        self.conn.execute(f'UPDATE emotions SET love={clove}, joy={cjoy}, surprise={csurprise}, anger={canger}, sadness={csadness}, fear={cfear} WHERE username=\"{username}\"')
+        self.conn.execute('UPDATE emotions SET love=' + clove + ', joy=' + cjoy + ', surprise=' + csurprise + ', anger=' + canger + ', sadness=' + csadness + ', fear=' + cfear + ' WHERE username=\"' + username + '\"')
         self.conn.commit()
         return
 
