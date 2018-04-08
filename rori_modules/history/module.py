@@ -15,7 +15,7 @@ class Database(DBManager):
             self.conn.commit()
         time = datetime.datetime.strptime(interaction.time[:19], '%Y-%m-%dT%H:%M:%S')
         tz = interaction.time[19:]
-        if len(tz) > 0:
+        if len(tz) > 4:
             h = int(tz[1:3])
             m = int(tz[4:])
             if tz[0] == '+':

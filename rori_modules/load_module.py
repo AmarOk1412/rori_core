@@ -7,7 +7,7 @@ def load_module(path):
     path = path.replace('/', '.')
     if path[len(path)-1] == '.':
         path = path[:-1]
-    mod = importlib.import_module(f'{path}.module')
+    mod = importlib.import_module(path + '.module')
     return mod
 
 def exec_module(path, interaction):
@@ -16,7 +16,7 @@ def exec_module(path, interaction):
     mod = load_module(module_path)
     if path[-1] == '/':
         path = path[:-1]
-    path = f'rori_modules/{path}/rsc.json'
+    path = 'rori_modules/' + path + '/rsc.json'
     sentences = '{}'
     if os.path.isfile(path):
         with open(path, 'r') as f:

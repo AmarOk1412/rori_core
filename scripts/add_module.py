@@ -16,5 +16,5 @@ arguments = '("' + name + '", ' + str(priority) + ', ' + str(enabled) + ', "'
 arguments += typem + '", "' + condition + '", "' + path + '")'
 print('INSERT INTO modules (name, priority, enabled, type, condition, path) VALUES' + arguments)
 c.execute('INSERT INTO modules (name, priority, enabled, type, condition, path) VALUES' + arguments)
-print(f'{c.lastrowid}')
+print(c.lastrowid)
 conn.commit()
