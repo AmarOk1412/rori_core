@@ -38,6 +38,8 @@ Please, see [wiki](https://github.com/AmarOk1412/rori_core/wiki/)
 + [Definitions](https://github.com/AmarOk1412/rori_core/wiki/Definitions)
 + [API documentation](https://github.com/AmarOk1412/rori_core/wiki/API)
 + [Authentification system and discovery](https://github.com/AmarOk1412/rori_core/wiki/Authentification-system-and-discovery)
++ [Interaction handling](https://github.com/AmarOk1412/rori_core/wiki/Interaction-handling)
++ [Modules](https://github.com/AmarOk1412/rori_core/wiki/Modules)
 
 ## Run your instance
 

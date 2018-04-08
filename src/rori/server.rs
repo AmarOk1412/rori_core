@@ -27,10 +27,11 @@
 
 use dbus::{Connection, BusType, Message};
 use dbus::arg::Dict;
-use rori::database::Database;
-use rori::user::{Device, User};
-use rori::interaction::Interaction;
 use rori::account::Account;
+use rori::database::Database;
+use rori::interaction::Interaction;
+use rori::modulemanager::ModuleManager;
+use rori::user::{Device, User};
 use std::collections::HashMap;
 
 /**
@@ -144,7 +145,6 @@ impl Server {
             self.add_new_anonymous_device(&interaction.author_ring_id);
         }
 
-        // TODO: link to old RORI structures to process messages
         // TODO should be handle by a module
         if username.len() == 0 {
             // Anonymous to user
@@ -196,6 +196,9 @@ impl Server {
             self.try_link_new_device(&interaction.author_ring_id,
                                      &String::from(*split.get(1).unwrap()));
         }
+
+        let mm = ModuleManager::new(interaction);
+        mm.process();
     }
 
     /**

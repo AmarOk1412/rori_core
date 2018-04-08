@@ -25,6 +25,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  **/
 
+use rori::module::*;
 use rusqlite;
 
 /**
@@ -82,13 +83,40 @@ impl Database {
     }
 
     /**
+     * Get enabled modules for a priority
+     * @param priority
+     * @return a vector of modules
+     */
+    pub fn get_enabled_modules(priority: u64) -> Vec<Module> {
+        let conn = rusqlite::Connection::open("rori.db").unwrap();
+        let mut stmt = conn.prepare("SELECT name, condition, path \
+                                     FROM modules WHERE priority=:priority AND enabled=1"
+                                   ).unwrap();
+       let mut rows = stmt.query_named(&[(":priority", &priority.to_string())]).unwrap();
+       let mut modules = Vec::new();
+       while let Some(row) = rows.next() {
+           let row = row.unwrap();
+           modules.push(
+               Module {
+                   condition: Box::new(TextCondition::new(row.get(1))),
+                   name: row.get(0),
+                   path: row.get(2),
+                   priority: priority,
+                   enabled: true,
+               }
+           );
+       }
+       modules
+    }
+
+    /**
      * Return one device
      * @ring_id the ring id of the device to search
      * @return (ring_id, username, devicename) or empty strings if ring_id not found
      */
     pub fn get_device(ring_id: &String) -> (String, String, String) {
         let conn = rusqlite::Connection::open("rori.db").unwrap();
-        let mut stmt = conn.prepare("SELECT ring_id, username, devicename  FROM devices WHERE ring_id=:ring_id").unwrap();
+        let mut stmt = conn.prepare("SELECT ring_id, username, devicename FROM devices WHERE ring_id=:ring_id").unwrap();
         let mut rows = stmt.query_named(&[(":ring_id", ring_id)]).unwrap();
         while let Some(row) = rows.next() {
             let row = row.unwrap();
@@ -111,6 +139,22 @@ impl Database {
             devices.push((row.get(0), row.get(1), row.get(2)));
         }
         devices
+    }
+
+    /**
+     * Return the last priority to treat
+     * @return i64
+     */
+    pub fn get_descending_priorities() -> Vec<i64> {
+        let mut result = Vec::new();
+        let conn = rusqlite::Connection::open("rori.db").unwrap();
+        let mut stmt = conn.prepare("SELECT DISTINCT priority FROM modules ORDER BY priority ASC").unwrap();
+        let mut rows = stmt.query(&[]).unwrap();
+        while let Some(row) = rows.next() {
+            let row = row.unwrap();
+            result.push(row.get(0));
+        }
+        result
     }
 
     /**

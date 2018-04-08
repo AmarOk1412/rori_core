@@ -166,7 +166,7 @@ mod tests_server {
         }
         // Contact should be added daemon side
         let mut idx_signal = 0;
-        let hundrer_millis = Duration::from_millis(100);
+        let hundred_millis = Duration::from_millis(100);
         while idx_signal < 10 {
             let storage = daemon.lock().unwrap().storage.clone();
             let has_new_info = storage.lock().unwrap().new_info.load(Ordering::SeqCst);
@@ -179,7 +179,7 @@ mod tests_server {
                 }
                 break;
             }
-            thread::sleep(hundrer_millis);
+            thread::sleep(hundred_millis);
             idx_signal += 1;
             if idx_signal == 10 {
                 panic!("Contact not set!");
@@ -226,7 +226,7 @@ mod tests_server {
         assert!(server.registered_users.first().unwrap().devices.first().unwrap().ring_id == "Tars_id");
         // This should has sent 2 messages
         let mut idx_signal = 0;
-        let hundrer_millis = Duration::from_millis(100);
+        let hundred_millis = Duration::from_millis(100);
         while idx_signal < 10 {
             let storage = daemon.lock().unwrap().storage.clone();
             let has_new_info = storage.lock().unwrap().new_info.load(Ordering::SeqCst);
@@ -235,7 +235,7 @@ mod tests_server {
                 assert!(interactions.len() == 2);
                 break;
             }
-            thread::sleep(hundrer_millis);
+            thread::sleep(hundred_millis);
             idx_signal += 1;
             if idx_signal == 10 {
                 panic!("interactions not set!");
@@ -300,7 +300,7 @@ mod tests_server {
         }
         // This should has sent 2 messages
         let mut idx_signal = 0;
-        let hundrer_millis = Duration::from_millis(100);
+        let hundred_millis = Duration::from_millis(100);
         while idx_signal < 10 {
             let storage = daemon.lock().unwrap().storage.clone();
             let has_new_info = storage.lock().unwrap().new_info.load(Ordering::SeqCst);
@@ -309,7 +309,7 @@ mod tests_server {
                 assert!(interactions.len() == 2);
                 break;
             }
-            thread::sleep(hundrer_millis);
+            thread::sleep(hundred_millis);
             idx_signal += 1;
             if idx_signal == 10 {
                 panic!("interactions not set!");
@@ -430,7 +430,7 @@ mod tests_server {
 
         // This should has sent 2 messages
         let mut idx_signal = 0;
-        let hundrer_millis = Duration::from_millis(100);
+        let hundred_millis = Duration::from_millis(100);
         while idx_signal < 10 {
             let storage = daemon.lock().unwrap().storage.clone();
             let has_new_info = storage.lock().unwrap().new_info.load(Ordering::SeqCst);
@@ -439,7 +439,7 @@ mod tests_server {
                 assert!(interactions.len() == 2);
                 break;
             }
-            thread::sleep(hundrer_millis);
+            thread::sleep(hundred_millis);
             idx_signal += 1;
             if idx_signal == 10 {
                 panic!("interactions not set!");
@@ -568,7 +568,7 @@ mod tests_server {
 
         // This should has sent 3 messages
         let mut idx_signal = 0;
-        let hundrer_millis = Duration::from_millis(100);
+        let hundred_millis = Duration::from_millis(100);
         while idx_signal < 10 {
             let storage = daemon.lock().unwrap().storage.clone();
             let has_new_info = storage.lock().unwrap().new_info.load(Ordering::SeqCst);
@@ -577,7 +577,7 @@ mod tests_server {
                 assert!(interactions.len() == 3);
                 break;
             }
-            thread::sleep(hundrer_millis);
+            thread::sleep(hundred_millis);
             idx_signal += 1;
             if idx_signal == 10 {
                 panic!("interactions not set!");
@@ -619,7 +619,7 @@ mod tests_server {
 
         // This should has sent 1 message
         let mut idx_signal = 0;
-        let hundrer_millis = Duration::from_millis(100);
+        let hundred_millis = Duration::from_millis(100);
         while idx_signal < 10 {
             let storage = daemon.lock().unwrap().storage.clone();
             let has_new_info = storage.lock().unwrap().new_info.load(Ordering::SeqCst);
@@ -628,7 +628,7 @@ mod tests_server {
                 assert!(interactions.len() == 1);
                 break;
             }
-            thread::sleep(hundrer_millis);
+            thread::sleep(hundred_millis);
             idx_signal += 1;
             if idx_signal == 10 {
                 panic!("interactions not set!");

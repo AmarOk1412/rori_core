@@ -1,0 +1,26 @@
+{
+  "salut": {
+    "en":"Oh. It's *you.* ",
+    "fr_FR":"Oh... c'est toi."
+  },
+  "bonjour": {
+    "en":"Hello",
+    "fr_FR":"Bonjour"
+  },
+  "longtime": {
+    "en":"Hello, it's been a long time",
+    "fr_FR":"Salut ! Ça faisait un petit bout de temps..."
+  },
+  "o/": {
+    "en":"o/",
+    "fr_FR":"o/"
+  },
+  "already": {
+    "en":"Hi, but I already see you",
+    "fr_FR":"Re-bonjour"
+  },
+  "already2": {
+    "en":"Are you amnesic?",
+    "fr_FR":"Rebonjour !"
+  }
+}

@@ -25,6 +25,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  **/
 
+use serde::ser::{Serialize, SerializeStruct};
+use serde::Serializer;
 use std::fmt;
 use time::Tm;
 
@@ -44,5 +46,21 @@ pub struct Interaction
 impl fmt::Display for Interaction {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}: {}", self.author_ring_id, self.body)
+    }
+}
+
+/**
+ * Used for serde_json
+ */
+impl Serialize for Interaction {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where S: Serializer
+    {
+        // 3 is the number of fields in the struct.
+       let mut state = serializer.serialize_struct("Interaction", 3)?;
+       state.serialize_field("author_ring_id", &self.author_ring_id).unwrap();
+       state.serialize_field("body", &self.body).unwrap();
+       state.serialize_field("time", &self.time.rfc3339().to_string()).unwrap();
+       state.end()
     }
 }
