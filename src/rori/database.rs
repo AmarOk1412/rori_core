@@ -63,6 +63,15 @@ impl Database {
                 path        TEXT,
                 metadatas   TEXT
                 )", &[]).unwrap();
+            conn.execute("CREATE TABLE emotions (
+                username    TEXT PRIMARY KEY,
+                love        INTEGER,
+                joy         INTEGER,
+                surprise    INTEGER,
+                anger       INTEGER,
+                sadness     INTEGER,
+                fear        INTEGER
+                )", &[]).unwrap();
             conn.execute("PRAGMA user_version = 1", &[]).unwrap();
         }
         info!("database ready");

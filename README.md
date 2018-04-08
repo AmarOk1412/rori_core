@@ -40,6 +40,7 @@ Please, see [wiki](https://github.com/AmarOk1412/rori_core/wiki/)
 + [Authentification system and discovery](https://github.com/AmarOk1412/rori_core/wiki/Authentification-system-and-discovery)
 + [Interaction handling](https://github.com/AmarOk1412/rori_core/wiki/Interaction-handling)
 + [Modules](https://github.com/AmarOk1412/rori_core/wiki/Modules)
++ [Emotions](https://github.com/AmarOk1412/rori_core/wiki/Emotions)
 
 ## Run your instance
 

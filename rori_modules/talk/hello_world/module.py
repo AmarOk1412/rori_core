@@ -1,7 +1,7 @@
 import datetime
 import random
 import re
-from rori import DBManager, Module
+from rori import DBManager, EmotionsManager, Module
 
 class Database(DBManager):
     def select_message_from_today(self, author):
@@ -28,10 +28,13 @@ class Module(Module):
         if alreadySeen:
             randomstr = random.choice(["already", "already2", ""])
             string_to_say = self.rori.get_localized_sentence(randomstr, self.sentences)
-            res = self.rori.send_for_best_client("text", interaction.author_ring_id, string_to_say)
+            self.rori.send_for_best_client("text", interaction.author_ring_id, string_to_say)
+            # Update emotions
+            csadness = EmotionsManager().get_emotions(interaction.author_ring_id)[4]
+            csadness = 20 if csadness > 20 else csadness
+            EmotionsManager().go_to_emotion(ring_id=interaction.author_ring_id, delta=2, joy=60, sadness=csadness)
         else:
             randomstr = random.choice(["salut", "bonjour", "longtime", "o/"])
             string_to_say = self.rori.get_localized_sentence(randomstr, self.sentences)
             res = self.rori.send_for_best_client("text", interaction.author_ring_id, string_to_say)
-        # TODO change emotions self.rori.go_to(emotion, direction)
         self.stop_processing = True
