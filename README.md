@@ -42,10 +42,28 @@ Please, see [wiki](https://github.com/AmarOk1412/rori_core/wiki/)
 + [Modules](https://github.com/AmarOk1412/rori_core/wiki/Modules)
 + [Emotions](https://github.com/AmarOk1412/rori_core/wiki/Emotions)
 
+## Build instructions
+
+`make dependencies` will install the following packages:
+1. `ring-daemon`: https://ring.cx for the communication
+2. `cargo`: https://crates.io/ for rust
+3. `sqlite3` for the database
+4. `libdbus` for the communication between the client and `ring-daemon`
+5. `libncurses` for the UI
+6. `openssl` to generate keys for the API
+7. `python > 3.6` for modules.
+
+
 ## Run your instance
 
-For now, there is no documentation to do that. Neither tools. Will come.
-(But you still can clone and make a `cargo run`. I can help you). You will need a `config.json` file like (or let the software write this file for you):
+`./launch-rori.sh` will:
+
+1. Generate keys for the API
+2. Then run RORI to generate the config file and the database
+3. For now, close and launch manually `python3 scripts/generate_modules.py` to fill the database
+4. `make run`
+
+`config.json` looks something like:
 ```
 {
   "ring_id":"xxxxxxxxxxxxxxxxx",
@@ -53,7 +71,6 @@ For now, there is no documentation to do that. Neither tools. Will come.
   "cert_path":"keys/api.p12",
   "cert_pass":""
 }
-
 ```
 
 Another way is to use docker... this is for now, how I run it:
