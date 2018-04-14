@@ -1,11 +1,7 @@
 all: keys build run
 
-fedora_deps="sudo dnf update \
-						 && sudo dnf config-manager --add-repo https://dl.ring.cx/ring-nightly/fedora_27/ring-nightly.repo \
-						 && sudo dnf install -y ring dbus-devel openssl dnf-plugins-core rust cargo sqlite ncurses-devel openssl-devel python python3-devel sqlite-devel"
-ubuntu_deps="sudo apt-get install -y libdbus-1-dev openssl"
 dependencies:
-	if [ -f "/etc/redhat-release" ]; then "$(fedora_deps)"; elif [ -f "/etc/debian_version" ]; then "$(ubuntu_deps)"; fi
+	if [ -f "/etc/redhat-release" ]; then "./scripts/build_fedora.sh"; elif [ -f "/etc/debian_version" ]; then "./scripts/build_ubuntu.sh"; fi
 
 clean-db:
 	rm -rf rori.db
