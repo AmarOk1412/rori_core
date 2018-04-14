@@ -1,0 +1,41 @@
+# TODO share volumes like keys/, rori.db and config.json to avoid to lose everything
+
+FROM ubuntu:17.10
+MAINTAINER Sébastien Blin <contact@enconn.fr>
+
+RUN apt-get update -y
+
+# Install ring-daemon
+RUN apt-get install gnupg2 dirmngr software-properties-common -y
+RUN sh -c "echo 'deb https://dl.ring.cx/ring-nightly/ubuntu_17.10/ ring main' > /etc/apt/sources.list.d/ring-nightly-main.list"
+RUN apt-key adv --keyserver pgp.mit.edu --recv-keys A295D773307D25A33AE72F2F64CD5FA175348F84
+RUN add-apt-repository universe
+RUN apt-get update -y && apt-get install ring -y
+
+# Install Rust
+RUN apt-get install curl sudo -y
+RUN curl -sSf https://static.rust-lang.org/rustup.sh | sh
+
+# Install rori_core dependencies
+RUN apt-get install sqlite3 libsqlite3-dev libncurses5-dev libssl-dev -y
+RUN apt-get install python libpython3.6-dev libsqlite3-dev libdbus-1-dev dbus-x11 -y # for cargo build
+
+# Build RORI
+COPY ./rori_modules /root/rori_core/rori_modules
+COPY ./scripts /root/rori_core/scripts
+COPY ./src /root/rori_core/src
+COPY ./Makefile /root/rori_core/Makefile
+COPY ./Cargo.toml /root/rori_core/Cargo.toml
+WORKDIR "/root/rori_core"
+RUN apt-get install build-essential -y
+RUN make build
+
+# Set the locale for python scripts
+RUN apt-get install -y locales
+RUN locale-gen en_US.UTF-8
+ENV LANG en_US.UTF-8
+ENV LANGUAGE en_US:en
+ENV LC_ALL en_US.UTF-8
+
+
+CMD ["/bin/bash", "scripts/launch-rori.sh"]

@@ -56,6 +56,17 @@ For now, there is no documentation to do that. Neither tools. Will come.
 
 ```
 
+Another way is to use docker... this is for now, how I run it:
+
+```bash
+make docker # build the image
+docker run -it --rm --privileged -e DISPLAY=$(DISPLAY) --net=host rori_core bash # not make docker-run for now
+sh scripts/launch-rori.sh # will init the keys/ and config.json
+python3 scripts/generate_modules.py # when this line will be removed, make docker-run will be sufficient
+sh scripts/launch-rori.sh and it's done
+```
+
+
 ## Contribute
 
 Please, feel free to contribute to this project in submitting patches, corrections, opening issues, etc.
