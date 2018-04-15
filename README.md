@@ -52,16 +52,15 @@ Please, see [wiki](https://github.com/AmarOk1412/rori_core/wiki/)
 5. `libncurses` for the UI
 6. `openssl` to generate keys for the API
 7. `python > 3.6` for modules.
-
+8. `pip3` and modules: `wikipedia`
 
 ## Run your instance
 
 `./launch-rori.sh` will:
 
 1. Generate keys for the API
-2. Then run RORI to generate the config file and the database
-3. For now, close and launch manually `python3 scripts/generate_modules.py` to fill the database
-4. `make run`
+2. Generate modules table into the database
+3. Then run RORI to generate the config file and the database
 
 `config.json` looks something like:
 ```
@@ -77,10 +76,7 @@ Another way is to use docker... this is for now, how I run it:
 
 ```bash
 make docker # build the image
-docker run -it --rm --privileged -e DISPLAY=$(DISPLAY) --net=host rori_core bash # not make docker-run for now
-sh scripts/launch-rori.sh # will init the keys/ and config.json
-python3 scripts/generate_modules.py # when this line will be removed, make docker-run will be sufficient
-sh scripts/launch-rori.sh and it's done
+make docker-run
 ```
 
 

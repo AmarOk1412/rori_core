@@ -15,3 +15,7 @@ sudo apt-get install sqlite3 libsqlite3-dev libncurses5-dev libssl-dev -y
 sudo apt-get install python libpython3.6-dev libsqlite3-dev libdbus-1-dev dbus-x11 -y # for cargo build
 
 sudo apt-get install build-essential -y
+
+# Install rori_modules dependencies
+sudo apt-get -y install python3-pip
+pip3 install wikipedia --user

@@ -48,12 +48,12 @@ impl Database {
         }
         if do_migration {
             info!("migrate database to version 1");
-            conn.execute("CREATE TABLE devices (
+            conn.execute("CREATE TABLE IF NOT EXISTS devices (
                 ring_id     TEXT PRIMARY KEY,
                 username    TEXT,
                 devicename  TEXT
                 )", &[]).unwrap();
-            conn.execute("CREATE TABLE modules (
+            conn.execute("CREATE TABLE IF NOT EXISTS modules (
                 id          INTEGER PRIMARY KEY,
                 name        TEXT,
                 priority    INTEGER,
@@ -63,7 +63,7 @@ impl Database {
                 path        TEXT,
                 metadatas   TEXT
                 )", &[]).unwrap();
-            conn.execute("CREATE TABLE emotions (
+            conn.execute("CREATE TABLE IF NOT EXISTS emotions (
                 username    TEXT PRIMARY KEY,
                 love        INTEGER,
                 joy         INTEGER,
