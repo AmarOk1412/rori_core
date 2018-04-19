@@ -1,6 +1,7 @@
 # RORI v4.0.0
 
 ![](https://travis-ci.org/AmarOk1412/rori_core.svg?branch=master)
+[![Coverage Status](https://coveralls.io/repos/github/AmarOk1412/rori_core/badge.svg?branch=master)](https://coveralls.io/github/AmarOk1412/rori_core?branch=master)
 
 RORI is a modulable open-source chatterbot platform. The first version was written in 2011 (2.0 in September 2012). I rewrote it in Rust in 2017, and I'm currently migrating the whole communication to use [GNU Ring](https://ring.cx).
 
