@@ -23,3 +23,5 @@ You can also develop for **RORI**. This is some ideas:
 + Create endpoints (like an IRC bot, a Discord bot, etc.)
 + Embed voice.mozilla.org for voice-recognition or text-to-speech
 + etc.
+
+Note: if you want to modify the rust code. It must be tested. And the coverage should be superior or equals to the previous one.

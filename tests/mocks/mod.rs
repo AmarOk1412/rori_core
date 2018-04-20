@@ -245,12 +245,4 @@ impl Daemon {
     pub fn stop(&mut self) {
         self.stop.store(true, Ordering::SeqCst);
     }
-
-    /**
-     * emit accountsChanged()
-     * @param self
-     */
-    pub fn emit_account_changed(&mut self) {
-        self.emit_account_changed.store(true, Ordering::SeqCst);
-    }
 }

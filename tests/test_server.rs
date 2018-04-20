@@ -39,6 +39,26 @@ mod tests_server {
     }
 
     #[test]
+    fn test_formatted_account() {
+        let server = setup(User::new(), Vec::new());
+        let account = server.account;
+        let formatted_account = format!("{}", account);
+        assert!(formatted_account == format!("[{}]: {} ({}) - Active: {}", account.id, account.ring_id, account.alias, account.enabled));
+        teardown();
+    }
+
+    #[test]
+    fn test_formatted_interaction() {
+        let interaction = Interaction {
+            author_ring_id: String::from("Tars_id"),
+            body: String::from("My joke percentage is at 70%!"),
+            time: time::now()
+        };
+        let formatted_account = format!("{}", interaction);
+        assert!(formatted_account == format!("{}: {}", interaction.author_ring_id, interaction.body));
+    }
+
+    #[test]
     // Scenario:
     // 1. Ask the server to add some anonymouses
     fn server_add_new_anonymous_device() {
