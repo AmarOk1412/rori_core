@@ -433,12 +433,12 @@ impl Server {
                     // Inform user that they is registered.
                     let msg = format!("{} is now known as {}", ring_id, username);
                     info!("{}", msg);
-                    self.send_interaction(&*id, ring_id, &*msg);
+                    self.send_interaction(&*id, ring_id, &*format!("{{\"registered\":true, \"username\":\"{}\"}}", username));
                 },
                 _ => {
                     let err = format!("registering {} for {} failed when updating db", username, ring_id);
                     warn!("{}", err);
-                    self.send_interaction(&*id, ring_id, &*err);
+                    self.send_interaction(&*id, ring_id, "{\"registered\":false}");
                 }
             }
         }
