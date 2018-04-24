@@ -364,19 +364,20 @@ impl Manager {
         let (account_id, author_ring_id, payloads) = msg.get3::<&str, &str, Dict<&str, &str, _>>();
         let author_ring_id = author_ring_id.unwrap().to_string();
         let mut body = String::new();
+        let mut datatype = String::new();
         for detail in payloads.unwrap() {
-            // TODO handle other interactions
             match detail {
                 (key, value) => {
-                    if key == "text/plain" {
-                        body = value.to_string();
-                    }
+                    datatype = key.to_string();
+                    body = value.to_string();
                 }
             }
         };
+        println!("{:?}", datatype);
         let interaction = Interaction {
             author_ring_id: author_ring_id,
             body: body,
+            datatype: datatype,
             time: time::now()
         };
         Some((account_id.unwrap().to_string(), interaction))

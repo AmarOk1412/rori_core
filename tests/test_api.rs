@@ -48,11 +48,13 @@ mod tests_api {
             m.lock().unwrap().server.handle_interaction(Interaction {
                 author_ring_id: String::from("Weasley"),
                 body: String::from("/register weasley"),
+                datatype: String::from("rori/command"),
                 time: time::now()
             });
             m.lock().unwrap().server.handle_interaction(Interaction {
                 author_ring_id: String::from("Weasley"),
                 body: String::from("/add_device core"),
+                datatype: String::from("rori/command"),
                 time: time::now()
             });
             // NOTE: for simplicity, test with an http endpoint (no certificate verification to do)

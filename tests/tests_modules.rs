@@ -125,6 +125,7 @@ mod tests_server {
         server.handle_interaction(Interaction {
             author_ring_id: String::from("Tars_id"),
             body: String::from("My joke percentage is at 70%!"),
+            datatype: String::from("text/plain"),
             time: time::now()
         });
         // Let the time to the module
@@ -145,6 +146,7 @@ mod tests_server {
         server.handle_interaction(Interaction {
             author_ring_id: String::from("Tars_id"),
             body: String::from("My joke percentage is at 60%!"),
+            datatype: String::from("text/plain"),
             time: time::now()
         });
         // Let the time to the module
@@ -180,6 +182,7 @@ mod tests_server {
         server.handle_interaction(Interaction {
             author_ring_id: String::from("Tars_id"),
             body: String::from("yo"),
+            datatype: String::from("text/plain"),
             time: time::now()
         });
 

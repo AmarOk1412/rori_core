@@ -52,10 +52,11 @@ mod tests_server {
         let interaction = Interaction {
             author_ring_id: String::from("Tars_id"),
             body: String::from("My joke percentage is at 70%!"),
+            datatype: String::from("text/plain"),
             time: time::now()
         };
         let formatted_account = format!("{}", interaction);
-        assert!(formatted_account == format!("{}: {}", interaction.author_ring_id, interaction.body));
+        assert!(formatted_account == format!("{} ({}): {}", interaction.author_ring_id, interaction.datatype, interaction.body));
     }
 
     #[test]
@@ -176,6 +177,7 @@ mod tests_server {
         server.handle_interaction(Interaction {
             author_ring_id: String::from("Tars_id"),
             body: String::from("My joke percentage is at 70%!"),
+            datatype: String::from("text/plain"),
             time: time::now()
         });
         // Should be in anonymouses
@@ -229,12 +231,14 @@ mod tests_server {
         server.handle_interaction(Interaction {
             author_ring_id: String::from("Tars_id"),
             body: String::from("/register tars"),
+            datatype: String::from("rori/command"),
             time: time::now()
         });
         // And bad tars try to to the same thing
         server.handle_interaction(Interaction {
             author_ring_id: String::from("Bad_Tars_id"),
             body: String::from("/register tars"),
+            datatype: String::from("rori/command"),
             time: time::now()
         });
         // Bad_Tars_id should still be an anonymous
@@ -293,12 +297,14 @@ mod tests_server {
         server.handle_interaction(Interaction {
             author_ring_id: String::from("Tars_id"),
             body: String::from("/add_device android"),
+            datatype: String::from("rori/command"),
             time: time::now()
         });
         // Tars_id2 do a /add_device pc (should fails because of Tars_pc)
         server.handle_interaction(Interaction {
             author_ring_id: String::from("Tars_id2"),
             body: String::from("/add_device pc"),
+            datatype: String::from("rori/command"),
             time: time::now()
         });
         // Tars_id should now be recognized for Tars_android
@@ -367,12 +373,14 @@ mod tests_server {
         server.handle_interaction(Interaction {
             author_ring_id: String::from("Tars_id"),
             body: String::from("/add_device pc Tars_id2"),
+            datatype: String::from("rori/command"),
             time: time::now()
         });
         // Tars_id2 do a /add_device pc2 Atlas_id (should fails)
         server.handle_interaction(Interaction {
             author_ring_id: String::from("Tars_id"),
             body: String::from("/add_device pc2 Atlas_id"),
+            datatype: String::from("rori/command"),
             time: time::now()
         });
         // Tars_id2 should now be recognized for Tars_pc and Atlas_id as nothing
@@ -430,6 +438,7 @@ mod tests_server {
         server.handle_interaction(Interaction {
             author_ring_id: String::from("Atlas_id1"),
             body: String::from("/rm_device"),
+            datatype: String::from("rori/command"),
             time: time::now()
         });
 
@@ -442,6 +451,7 @@ mod tests_server {
         server.handle_interaction(Interaction {
             author_ring_id: String::from("Atlas_id2"),
             body: String::from("/rm_device"),
+            datatype: String::from("rori/command"),
             time: time::now()
         });
 
@@ -503,6 +513,7 @@ mod tests_server {
         server.handle_interaction(Interaction {
             author_ring_id: String::from("Atlas_id1"),
             body: String::from("/rm_device Atlas_id2"),
+            datatype: String::from("rori/command"),
             time: time::now()
         });
 
@@ -515,6 +526,7 @@ mod tests_server {
         server.handle_interaction(Interaction {
             author_ring_id: String::from("Atlas_id2"),
             body: String::from("/rm_device Tars_id1"),
+            datatype: String::from("rori/command"),
             time: time::now()
         });
 
@@ -546,6 +558,7 @@ mod tests_server {
         server.handle_interaction(Interaction {
             author_ring_id: String::from("Atlas_id1"),
             body: String::from("/register Atlas"),
+            datatype: String::from("rori/command"),
             time: time::now()
         });
         assert!(server.anonymous_user.devices.len() == 2);
@@ -555,6 +568,7 @@ mod tests_server {
         server.handle_interaction(Interaction {
             author_ring_id: String::from("Atlas_id1"),
             body: String::from("/link Atlas_id2"),
+            datatype: String::from("rori/command"),
             time: time::now()
         });
         assert!(server.anonymous_user.devices.len() == 2);
@@ -563,6 +577,7 @@ mod tests_server {
         server.handle_interaction(Interaction {
             author_ring_id: String::from("Atlas_id2"),
             body: String::from("/link Atlas"),
+            datatype: String::from("rori/command"),
             time: time::now()
         });
 
@@ -574,6 +589,7 @@ mod tests_server {
         server.handle_interaction(Interaction {
             author_ring_id: String::from("Atlas_id3"),
             body: String::from("/link Atlas"),
+            datatype: String::from("rori/command"),
             time: time::now()
         });
         assert!(server.anonymous_user.devices.len() == 1);
@@ -582,6 +598,7 @@ mod tests_server {
         server.handle_interaction(Interaction {
             author_ring_id: String::from("Atlas_id1"),
             body: String::from("/link Atlas_id3"),
+            datatype: String::from("rori/command"),
             time: time::now()
         });
         assert!(server.anonymous_user.devices.len() == 0);
@@ -632,6 +649,7 @@ mod tests_server {
         server.handle_interaction(Interaction {
             author_ring_id: String::from("Atlas_id1"),
             body: String::from("/unregister"),
+            datatype: String::from("rori/command"),
             time: time::now()
         });
         assert!(server.anonymous_user.devices.len() == 2);

@@ -146,56 +146,60 @@ impl Server {
         }
 
         // TODO should be handle by a module
-        if username.len() == 0 {
-            // Anonymous to user
-            if interaction.body.starts_with("/register") {
+        if interaction.datatype == "rori/command" {
+            if username.len() == 0 {
+                // Anonymous to user
+                if interaction.body.starts_with("/register") {
+                    let split: Vec<&str> = interaction.body.split(' ').collect();
+                    if split.len() < 2 {
+                        warn!("register received, but no username detected");
+                        return;
+                    }
+                    self.try_register_username(&interaction.author_ring_id,
+                                               &String::from(*split.get(1).unwrap()));
+                }
+            } else {
+                if interaction.body.starts_with("/add_device") {
+                    // User wants to register a device
+                    // /add_device name (ring_id)
+                   let split: Vec<&str> = interaction.body.split(' ').collect();
+                   if split.len() < 2 {
+                       warn!("add_device received, but no device detected");
+                       return;
+                   }
+                   let mut device_to_add = interaction.author_ring_id.clone();
+                   if split.len() == 3 && split.last().unwrap_or(&"").len() > 0 {
+                       device_to_add = split.last().unwrap_or(&"").to_string();
+                   }
+                   self.try_register_device(&interaction.author_ring_id, &device_to_add, &username,
+                                            &String::from(*split.get(1).unwrap()));
+                } else if interaction.body.starts_with("/rm_device") {
+                    // User wants to revoke a device
+                    // /rm_device name (ring_id)
+                    let mut device_to_remove = interaction.author_ring_id.clone();
+                    let split: Vec<&str> = interaction.body.split(' ').collect();
+                    if split.len() == 2 && split.last().unwrap_or(&"").len() > 0 {
+                        device_to_remove = split.last().unwrap_or(&"").to_string();
+                    }
+                    self.try_remove_device(&interaction.author_ring_id, &device_to_remove);
+                } else if interaction.body.starts_with("/unregister") {
+                    // User wants to unregister
+                    self.try_unregister(&interaction.author_ring_id);
+                }
+            }
+            // Handle multi-devices
+            if interaction.body.starts_with("/link") {
                 let split: Vec<&str> = interaction.body.split(' ').collect();
                 if split.len() < 2 {
-                    warn!("register received, but no username detected");
+                    warn!("link received, but no argument detected");
                     return;
                 }
-                self.try_register_username(&interaction.author_ring_id,
-                                           &String::from(*split.get(1).unwrap()));
+                self.try_link_new_device(&interaction.author_ring_id,
+                                         &String::from(*split.get(1).unwrap()));
             }
-        } else {
-            if interaction.body.starts_with("/add_device") {
-                // User wants to register a device
-                // /add_device name (ring_id)
-               let split: Vec<&str> = interaction.body.split(' ').collect();
-               if split.len() < 2 {
-                   warn!("add_device received, but no device detected");
-                   return;
-               }
-               let mut device_to_add = interaction.author_ring_id.clone();
-               if split.len() == 3 && split.last().unwrap_or(&"").len() > 0 {
-                   device_to_add = split.last().unwrap_or(&"").to_string();
-               }
-               self.try_register_device(&interaction.author_ring_id, &device_to_add, &username,
-                                        &String::from(*split.get(1).unwrap()));
-            } else if interaction.body.starts_with("/rm_device") {
-                // User wants to revoke a device
-                // /rm_device name (ring_id)
-                let mut device_to_remove = interaction.author_ring_id.clone();
-                let split: Vec<&str> = interaction.body.split(' ').collect();
-                if split.len() == 2 && split.last().unwrap_or(&"").len() > 0 {
-                    device_to_remove = split.last().unwrap_or(&"").to_string();
-                }
-                self.try_remove_device(&interaction.author_ring_id, &device_to_remove);
-            } else if interaction.body.starts_with("/unregister") {
-                // User wants to unregister
-                self.try_unregister(&interaction.author_ring_id);
-            }
+
         }
-        // Handle multi-devices
-        if interaction.body.starts_with("/link") {
-            let split: Vec<&str> = interaction.body.split(' ').collect();
-            if split.len() < 2 {
-                warn!("link received, but no argument detected");
-                return;
-            }
-            self.try_link_new_device(&interaction.author_ring_id,
-                                     &String::from(*split.get(1).unwrap()));
-        }
+
 
         let mm = ModuleManager::new(interaction);
         mm.process();
