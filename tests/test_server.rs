@@ -272,6 +272,34 @@ mod tests_server {
 
     #[test]
     // Scenario
+    // 1. A contact send /register without username
+    fn server_register_without_username() {
+        let daemon = Arc::new(Mutex::new(Daemon::new()));
+        let cloned_daemon = daemon.clone();
+        let daemon_thread = thread::spawn(move|| {
+            Daemon::run(cloned_daemon);
+        });
+        let mut anonymous = User::new();
+        anonymous.devices.push(Device::new(&String::from("Tars_id")));
+        let mut server = setup(anonymous, Vec::new());
+        assert!(server.anonymous_user.devices.len() == 1);
+        // Tars_id do a /register
+        server.handle_interaction(Interaction {
+            author_ring_id: String::from("Tars_id"),
+            body: String::from("/register"),
+            datatype: String::from("rori/command"),
+            time: time::now()
+        });
+        // Bad_Tars_id should still be an anonymous
+        assert!(server.anonymous_user.devices.len() == 1);
+        assert!(server.anonymous_user.devices.first().unwrap().ring_id == "Tars_id");
+        teardown();
+        daemon.lock().unwrap().stop();
+        let _ = daemon_thread.join();
+    }
+
+    #[test]
+    // Scenario
     // 1. A User send /add_device devicename
     // 2. A User send /add_device devicename2 where username_devicename2 is already taken
     fn server_register_device() {
@@ -340,6 +368,114 @@ mod tests_server {
             if idx_signal == 10 {
                 panic!("interactions not set!");
             }
+        }
+        teardown();
+        daemon.lock().unwrap().stop();
+        let _ = daemon_thread.join();
+    }
+
+    #[test]
+    // Scenario
+    // 1. A User send /add_device devicename from another user
+    fn server_register_bad_device() {
+        let daemon = Arc::new(Mutex::new(Daemon::new()));
+        let cloned_daemon = daemon.clone();
+        let daemon_thread = thread::spawn(move|| {
+            Daemon::run(cloned_daemon);
+        });
+        let mut tars = User::new();
+        tars.name = String::from("Tars");
+        tars.devices.push(Device::new(&String::from("Tars_id")));
+        tars.devices.push(Device::new(&String::from("Tars_id2")));
+        let mut badtars = User::new();
+        badtars.name = String::from("Tars_pc");
+        badtars.devices.push(Device::new(&String::from("Tars_pc")));
+        let mut users = Vec::new();
+        users.push(tars);
+        users.push(badtars);
+        let mut server = setup(User::new(), users);
+
+        // Tars_pc do a /add_device pc of Tars_id (should fails because of it's someone else device)
+        server.handle_interaction(Interaction {
+            author_ring_id: String::from("Tars_pc"),
+            body: String::from("/add_device pc Tars_id"),
+            datatype: String::from("rori/command"),
+            time: time::now()
+        });
+        // Tars_id should now be recognized for Tars_android
+        let mut confirmed = false;
+        for user in &server.registered_users {
+            if user.name == "Tars" {
+                for device in &user.devices {
+                    if device.ring_id == "Tars_id" {
+                        assert!(device.name.len() == 0);
+                        confirmed = true;
+                    }
+                }
+            }
+        }
+        if !confirmed {
+            panic!("Tars_id not found");
+        }
+        // This should has sent some messages
+        let mut idx_signal = 0;
+        let hundred_millis = Duration::from_millis(100);
+        while idx_signal < 10 {
+            let storage = daemon.lock().unwrap().storage.clone();
+            let has_new_info = storage.lock().unwrap().new_info.load(Ordering::SeqCst);
+            if has_new_info {
+                let interactions = storage.lock().unwrap().interactions_sent.clone();
+                assert!(interactions.len() != 0);
+                break;
+            }
+            thread::sleep(hundred_millis);
+            idx_signal += 1;
+            if idx_signal == 10 {
+                panic!("interactions not set!");
+            }
+        }
+        teardown();
+        daemon.lock().unwrap().stop();
+        let _ = daemon_thread.join();
+    }
+
+    #[test]
+    // Scenario
+    // 1. A User send /add_device without devicename
+    fn server_register_device_invalid() {
+        let daemon = Arc::new(Mutex::new(Daemon::new()));
+        let cloned_daemon = daemon.clone();
+        let daemon_thread = thread::spawn(move|| {
+            Daemon::run(cloned_daemon);
+        });
+        let mut tars = User::new();
+        tars.name = String::from("Tars");
+        tars.devices.push(Device::new(&String::from("Tars_id")));
+        let mut users = Vec::new();
+        users.push(tars);
+        let mut server = setup(User::new(), users);
+
+        // Tars_id do a /add_device (should fails)
+        server.handle_interaction(Interaction {
+            author_ring_id: String::from("Tars_id"),
+            body: String::from("/add_device  "),
+            datatype: String::from("rori/command"),
+            time: time::now()
+        });
+        // Tars_id should now be recognized for Tars_android
+        let mut confirmed = false;
+        for user in &server.registered_users {
+            if user.name == "Tars" {
+                for device in &user.devices {
+                    if device.ring_id == "Tars_id" {
+                        assert!(device.name.len() == 0);
+                    }
+                }
+                confirmed = true;
+            }
+        }
+        if !confirmed {
+            panic!("Tars not found");
         }
         teardown();
         daemon.lock().unwrap().stop();
@@ -503,6 +639,9 @@ mod tests_server {
         let mut tars_device = Device::new(&String::from("Tars_id1"));
         tars_device.name = String::from("Device");
         tars.devices.push(tars_device);
+        let mut tars_device = Device::new(&String::from("Tars_id2"));
+        tars_device.name = String::from("Device2");
+        tars.devices.push(tars_device);
         let mut users = Vec::new();
         users.push(atlas);
         users.push(tars);
@@ -511,34 +650,92 @@ mod tests_server {
 
         // Atlas_id1 do a /rm_device Atlas_id2 (should succeed)
         server.handle_interaction(Interaction {
-            author_ring_id: String::from("Atlas_id1"),
-            body: String::from("/rm_device Atlas_id2"),
-            datatype: String::from("rori/command"),
-            time: time::now()
-        });
-
-        assert!(server.anonymous_user.devices.len() == 1);
-        assert!(server.anonymous_user.devices.first().unwrap().ring_id == "Atlas_id2");
-        assert!(server.registered_users.len() == 2);
-        assert!(server.registered_users.first().unwrap().devices.first().unwrap().ring_id == "Atlas_id1");
-
-        // Atlas_id1 do a /rm_device Tars_id1 (should fails)
-        server.handle_interaction(Interaction {
-            author_ring_id: String::from("Atlas_id2"),
+            author_ring_id: String::from("Tars_id2"),
             body: String::from("/rm_device Tars_id1"),
             datatype: String::from("rori/command"),
             time: time::now()
         });
 
         assert!(server.anonymous_user.devices.len() == 1);
+        assert!(server.anonymous_user.devices.first().unwrap().ring_id == "Tars_id1");
         assert!(server.registered_users.len() == 2);
-        assert!(server.registered_users.last().unwrap().devices.first().unwrap().ring_id == "Tars_id1");
+        assert!(server.registered_users.last().unwrap().devices.first().unwrap().ring_id == "Tars_id2");
 
         teardown();
         daemon.lock().unwrap().stop();
         let _ = daemon_thread.join();
     }
 
+
+    #[test]
+    // Scenario
+    // 1. A User send /add_device devicename from another user
+    fn server_register_device_someone_else() {
+        let daemon = Arc::new(Mutex::new(Daemon::new()));
+        let cloned_daemon = daemon.clone();
+        let daemon_thread = thread::spawn(move|| {
+            Daemon::run(cloned_daemon);
+        });
+        let mut tars = User::new();
+        tars.name = String::from("Tars");
+        tars.devices.push(Device::new(&String::from("Tars_id")));
+        let mut tars_device = Device::new(&String::from("Tars_id1"));
+        tars_device.name = String::from("Device");
+        tars.devices.push(tars_device);
+        let mut badtars = User::new();
+        badtars.name = String::from("Tars_pc");
+        badtars.devices.push(Device::new(&String::from("Tars_pc")));
+        let mut users = Vec::new();
+        users.push(tars);
+        users.push(badtars);
+        let mut server = setup(User::new(), users);
+        let _ = Database::insert_new_device(&String::from("Tars_id"), &String::from("Tars"), &String::from(""));
+        let _ = Database::insert_new_device(&String::from("Tars_id1"), &String::from("Tars"), &String::from("Device"));
+        let _ = Database::insert_new_device(&String::from("Tars_pc"), &String::from("Tars_pc"), &String::from(""));
+
+        // Tars_pc do a /add_device pc of Tars_id (should fails because of it's someone else device)
+        server.handle_interaction(Interaction {
+            author_ring_id: String::from("Tars_pc"),
+            body: String::from("/rm_device Tars_id1"),
+            datatype: String::from("rori/command"),
+            time: time::now()
+        });
+        // Tars_id should now be recognized for Tars_android
+        let mut confirmed = false;
+        for user in &server.registered_users {
+            if user.name == "Tars" {
+                for device in &user.devices {
+                    if device.ring_id == "Tars_id1" {
+                        assert!(device.name == "Device");
+                        confirmed = true;
+                    }
+                }
+            }
+        }
+        if !confirmed {
+            panic!("Tars_id1 not found");
+        }
+        // This should has sent some messages
+        let mut idx_signal = 0;
+        let hundred_millis = Duration::from_millis(100);
+        while idx_signal < 10 {
+            let storage = daemon.lock().unwrap().storage.clone();
+            let has_new_info = storage.lock().unwrap().new_info.load(Ordering::SeqCst);
+            if has_new_info {
+                let interactions = storage.lock().unwrap().interactions_sent.clone();
+                assert!(interactions.len() != 0);
+                break;
+            }
+            thread::sleep(hundred_millis);
+            idx_signal += 1;
+            if idx_signal == 10 {
+                panic!("interactions not set!");
+            }
+        }
+        teardown();
+        daemon.lock().unwrap().stop();
+        let _ = daemon_thread.join();
+    }
     #[test]
     // Scenario
     // 1. A user authorizes another device to link
@@ -620,6 +817,39 @@ mod tests_server {
                 panic!("interactions not set!");
             }
         }
+
+        teardown();
+        daemon.lock().unwrap().stop();
+        let _ = daemon_thread.join();
+    }
+
+    #[test]
+    // Scenario
+    // 1. A user send /link without any argument
+    fn server_link_device_invalid() {
+        let daemon = Arc::new(Mutex::new(Daemon::new()));
+        let cloned_daemon = daemon.clone();
+        let daemon_thread = thread::spawn(move|| {
+            Daemon::run(cloned_daemon);
+        });
+        let mut server = setup(User::new(), Vec::new());
+        server.add_new_anonymous_device(&String::from("Atlas_id1"));
+        server.handle_interaction(Interaction {
+            author_ring_id: String::from("Atlas_id1"),
+            body: String::from("/register Atlas"),
+            datatype: String::from("rori/command"),
+            time: time::now()
+        });
+        assert!(server.registered_users.len() == 1);
+
+        // Atlas_id authorizes nobody
+        server.handle_interaction(Interaction {
+            author_ring_id: String::from("Atlas_id1"),
+            body: String::from("/link"),
+            datatype: String::from("rori/command"),
+            time: time::now()
+        });
+        assert!(server.registered_users.first().unwrap().devices.len() == 1);
 
         teardown();
         daemon.lock().unwrap().stop();
