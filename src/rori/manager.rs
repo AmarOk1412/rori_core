@@ -373,7 +373,6 @@ impl Manager {
                 }
             }
         };
-        println!("{:?}", datatype);
         let interaction = Interaction {
             author_ring_id: author_ring_id,
             body: body,

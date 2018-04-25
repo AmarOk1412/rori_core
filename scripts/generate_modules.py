@@ -47,4 +47,9 @@ print('add name module')
 arguments = '("name", 2, 1, "text", "^(quel est? ton.{0,30}nom.{0,40})|qui e(s|t).{0,4}(tu|vous)|o(u|ù)vien(s|t).ton.{0,20}nom|say.your.name|what.is.your.name|who.are.you|why.rori|rori.{0,100}come.from", "talk/name")'
 c.execute('INSERT INTO modules (name, priority, enabled, type, condition, path) VALUES' + arguments)
 
+# music/music_launcher
+print('add music_start module')
+arguments = '("music_start", 1, 1, "text", "^(musi(c|que) ?!?)|((play|lance|joue).{1,30}(musi(c|que) ?!?))$", "music/start")'
+c.execute('INSERT INTO modules (name, priority, enabled, type, condition, path) VALUES' + arguments)
+
 conn.commit()

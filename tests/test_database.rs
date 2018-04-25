@@ -215,4 +215,30 @@ mod tests_database {
         assert!(device.2 == "Jupiter");
         teardown();
     }
+
+    #[test]
+    fn test_get_set_datatypes() {
+        setup();
+        // Invalid set, should get nothing
+        let mut dts = Vec::new();
+        dts.push(String::from("dt1"));
+        dts.push(String::from("dt2"));
+        let _ = Database::set_datatypes(&String::from("GLaDOs"), dts.clone());
+        let get = Database::get_datatypes(&String::from("GLaDOs"));
+        assert!(get.len() == 0);
+        // Insert new device
+        let row = Database::insert_new_device(&String::from("GLaDOs"), &String::from("PBody"), &String::from("Atlas"));
+        assert!(row.is_ok());
+        let get = Database::get_datatypes(&String::from("GLaDOs"));
+        assert!(get.len() == 0);
+        // Valid set should get what we set
+        let _ = Database::set_datatypes(&String::from("GLaDOs"), dts.clone());
+        let get = Database::get_datatypes(&String::from("GLaDOs"));
+        assert!(get == dts);
+        // Should be rewritable
+        let _ = Database::set_datatypes(&String::from("GLaDOs"), Vec::new());
+        let get = Database::get_datatypes(&String::from("GLaDOs"));
+        assert!(get.len() == 0);
+        teardown();
+    }
 }

@@ -187,8 +187,24 @@ impl Server {
                     self.try_unregister(&interaction.author_ring_id);
                 }
             }
-            // Handle multi-devices
-            if interaction.body.starts_with("/link") {
+
+            if interaction.body.starts_with("/add_types") {
+                // Handle add_type
+                let mut split: Vec<&str> = interaction.body.split(' ').collect();
+                split.remove(0);
+                self.add_datatypes(&interaction.author_ring_id, split);
+            } else if interaction.body.starts_with("/rm_types") {
+                // Handle rm_type
+                let mut split: Vec<&str> = interaction.body.split(' ').collect();
+                split.remove(0);
+                self.rm_datatypes(&interaction.author_ring_id, split);
+            } else if interaction.body.starts_with("/set_types") {
+                // Handle set_type
+                let mut split: Vec<&str> = interaction.body.split(' ').collect();
+                split.remove(0);
+                self.set_datatypes(&interaction.author_ring_id, split);
+            } else if interaction.body.starts_with("/link") {
+                // Handle multi-devices
                 let split: Vec<&str> = interaction.body.split(' ').collect();
                 if split.len() < 2 {
                     warn!("link received, but no argument detected");
@@ -272,6 +288,22 @@ impl Server {
     }
 
     /**
+     * Add some datatypes of a device
+     * @param device_ring_id
+     * @param add_types to add
+     */
+    fn add_datatypes(&self, device_ring_id: &str, add_types: Vec<&str>) {
+        let mut current_datatypes = Database::get_datatypes(&String::from(device_ring_id));
+        for dtype in add_types.into_iter() {
+            match current_datatypes.iter().position(|dt| dt == dtype) {
+                Some(_) => {},
+                None => current_datatypes.push(String::from(dtype))
+            }
+        }
+        let _ = Database::set_datatypes(&String::from(device_ring_id), current_datatypes);
+    }
+
+    /**
      * Move the anonymous device to a registered user
      * @param self
      * @param ring_id to move (must be in anonymous)
@@ -289,6 +321,24 @@ impl Server {
         }
         // Update database
         let _ = Database::update_username(ring_id, username);
+    }
+
+    /**
+     * Remove some datatypes of a device
+     * @param device_ring_id
+     * @param add_types to remove
+     */
+    fn rm_datatypes(&self, device_ring_id: &str, add_types: Vec<&str>) {
+        let mut current_datatypes = Database::get_datatypes(&String::from(device_ring_id));
+        for dtype in add_types.into_iter() {
+            match current_datatypes.iter().position(|dt| dt == dtype) {
+                Some(p) => {
+                    current_datatypes.remove(p);
+                },
+                None => {}
+            }
+        }
+        let _ = Database::set_datatypes(&String::from(device_ring_id), current_datatypes);
     }
 
     /**
@@ -582,5 +632,18 @@ impl Server {
             None => 0
         };
         interaction_id
+    }
+
+    /**
+     * Change the datatypes of a device
+     * @param device_ring_id
+     * @param datatypes
+     */
+    fn set_datatypes(&self, device_ring_id: &str, datatypes: Vec<&str>) {
+        let mut dt: Vec<String> = Vec::new();
+        for datatype in datatypes.into_iter() {
+            dt.push(String::from(datatype));
+        }
+        let _ = Database::set_datatypes(&String::from(device_ring_id), dt);
     }
 }

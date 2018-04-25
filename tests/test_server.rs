@@ -93,6 +93,184 @@ mod tests_server {
 
     #[test]
     // Scenario:
+    // 1. Ask the server to add an anonymous and add_types
+    fn server_add_types() {
+        let daemon = Arc::new(Mutex::new(Daemon::new()));
+        let cloned_daemon = daemon.clone();
+        let daemon_thread = thread::spawn(move|| {
+            Daemon::run(cloned_daemon);
+        });
+        let mut anonymous = User::new();
+        anonymous.devices.push(Device::new(&String::from("Tars_id")));
+        let mut server = setup(anonymous, Vec::new());
+        assert!(server.anonymous_user.devices.len() == 1);
+        let _ = Database::insert_new_device(&String::from("Tars_id"), &String::new(), &String::new());
+
+        // Tars_id do a /add_types without datatypes
+        server.handle_interaction(Interaction {
+            author_ring_id: String::from("Tars_id"),
+            body: String::from("/add_types"),
+            datatype: String::from("rori/command"),
+            time: time::now()
+        });
+        let dt = Database::get_datatypes(&String::from("Tars_id"));
+        assert!(dt.len() == 0);
+
+        // Tars_id do a /add_types with 2 datatypes
+        server.handle_interaction(Interaction {
+            author_ring_id: String::from("Tars_id"),
+            body: String::from("/add_types music command"),
+            datatype: String::from("rori/command"),
+            time: time::now()
+        });
+        let dt = Database::get_datatypes(&String::from("Tars_id"));
+        assert!(dt.len() == 2);
+        assert!(dt.first().unwrap() == "music");
+        assert!(dt.last().unwrap() == "command");
+
+        // Tars_id do a /add_types with 1 already set and 1 not set
+        server.handle_interaction(Interaction {
+            author_ring_id: String::from("Tars_id"),
+            body: String::from("/add_types music other"),
+            datatype: String::from("rori/command"),
+            time: time::now()
+        });
+        let dt = Database::get_datatypes(&String::from("Tars_id"));
+        assert!(dt.len() == 3);
+        assert!(dt.last().unwrap() == "other");
+
+
+        teardown();
+        daemon.lock().unwrap().stop();
+        let _ = daemon_thread.join();
+    }
+
+    #[test]
+    // Scenario:
+    // 1. Ask the server to add an anonymous and add_types then rm_types
+    fn server_rm_types() {
+        let daemon = Arc::new(Mutex::new(Daemon::new()));
+        let cloned_daemon = daemon.clone();
+        let daemon_thread = thread::spawn(move|| {
+            Daemon::run(cloned_daemon);
+        });
+        let mut anonymous = User::new();
+        anonymous.devices.push(Device::new(&String::from("Tars_id")));
+        let mut server = setup(anonymous, Vec::new());
+        assert!(server.anonymous_user.devices.len() == 1);
+        let _ = Database::insert_new_device(&String::from("Tars_id"), &String::new(), &String::new());
+
+        // Tars_id do a /add_types with 3 datatypes
+        server.handle_interaction(Interaction {
+            author_ring_id: String::from("Tars_id"),
+            body: String::from("/add_types music command other"),
+            datatype: String::from("rori/command"),
+            time: time::now()
+        });
+        let dt = Database::get_datatypes(&String::from("Tars_id"));
+        assert!(dt.len() == 3);
+
+        // Tars_id do a /rm_types with nothing
+        server.handle_interaction(Interaction {
+            author_ring_id: String::from("Tars_id"),
+            body: String::from("/rm_types"),
+            datatype: String::from("rori/command"),
+            time: time::now()
+        });
+        let dt = Database::get_datatypes(&String::from("Tars_id"));
+        assert!(dt.len() == 3);
+
+        // Tars_id do a /rm_types with something not in types
+        server.handle_interaction(Interaction {
+            author_ring_id: String::from("Tars_id"),
+            body: String::from("/rm_types nothing"),
+            datatype: String::from("rori/command"),
+            time: time::now()
+        });
+        let dt = Database::get_datatypes(&String::from("Tars_id"));
+        assert!(dt.len() == 3);
+
+        // Tars_id do a /rm_types with something not in types and 2 in types
+        server.handle_interaction(Interaction {
+            author_ring_id: String::from("Tars_id"),
+            body: String::from("/rm_types nothing music command"),
+            datatype: String::from("rori/command"),
+            time: time::now()
+        });
+        let dt = Database::get_datatypes(&String::from("Tars_id"));
+        assert!(dt.len() == 1);
+        assert!(dt.first().unwrap() == "other");
+
+        // Tars_id do a /rm_types with last one
+        server.handle_interaction(Interaction {
+            author_ring_id: String::from("Tars_id"),
+            body: String::from("/rm_types other"),
+            datatype: String::from("rori/command"),
+            time: time::now()
+        });
+        let dt = Database::get_datatypes(&String::from("Tars_id"));
+        assert!(dt.len() == 0);
+
+        teardown();
+        daemon.lock().unwrap().stop();
+        let _ = daemon_thread.join();
+    }
+
+    #[test]
+    // Scenario:
+    // 1. Ask the server to add an anonymous and set_types
+    fn server_set_types() {
+        let daemon = Arc::new(Mutex::new(Daemon::new()));
+        let cloned_daemon = daemon.clone();
+        let daemon_thread = thread::spawn(move|| {
+            Daemon::run(cloned_daemon);
+        });
+        let mut anonymous = User::new();
+        anonymous.devices.push(Device::new(&String::from("Tars_id")));
+        let mut server = setup(anonymous, Vec::new());
+        assert!(server.anonymous_user.devices.len() == 1);
+        let _ = Database::insert_new_device(&String::from("Tars_id"), &String::new(), &String::new());
+
+        // Tars_id do a /add_types with 3 datatypes
+        server.handle_interaction(Interaction {
+            author_ring_id: String::from("Tars_id"),
+            body: String::from("/add_types music command other"),
+            datatype: String::from("rori/command"),
+            time: time::now()
+        });
+        let dt = Database::get_datatypes(&String::from("Tars_id"));
+        assert!(dt.len() == 3);
+
+        // Tars_id do a /set_types with two types
+        server.handle_interaction(Interaction {
+            author_ring_id: String::from("Tars_id"),
+            body: String::from("/set_types type1 type2"),
+            datatype: String::from("rori/command"),
+            time: time::now()
+        });
+        let dt = Database::get_datatypes(&String::from("Tars_id"));
+        assert!(dt.len() == 2);
+        assert!(dt.first().unwrap() == "type1");
+        assert!(dt.last().unwrap() == "type2");
+
+        // Tars_id do a /set_types with nothing
+        server.handle_interaction(Interaction {
+            author_ring_id: String::from("Tars_id"),
+            body: String::from("/set_types "),
+            datatype: String::from("rori/command"),
+            time: time::now()
+        });
+        let dt = Database::get_datatypes(&String::from("Tars_id"));
+        assert!(dt.len() == 0);
+
+        teardown();
+        daemon.lock().unwrap().stop();
+        let _ = daemon_thread.join();
+    }
+
+
+    #[test]
+    // Scenario:
     // 1. Someone try to get some ring_id from devicenames or usernames
     fn server_get_ring_id() {
         let mut registered = User::new();

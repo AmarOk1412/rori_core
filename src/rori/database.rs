@@ -49,9 +49,10 @@ impl Database {
         if do_migration {
             info!("migrate database to version 1");
             conn.execute("CREATE TABLE IF NOT EXISTS devices (
-                ring_id     TEXT PRIMARY KEY,
-                username    TEXT,
-                devicename  TEXT
+                ring_id          TEXT PRIMARY KEY,
+                username         TEXT,
+                devicename       TEXT,
+                additional_types TEXT
                 )", &[]).unwrap();
             conn.execute("CREATE TABLE IF NOT EXISTS modules (
                 id          INTEGER PRIMARY KEY,
@@ -78,6 +79,30 @@ impl Database {
     }
 
     /**
+     * get additional supported types for a device (text/plain is supported by default)
+     * NOTE: because this is only used by rori_modules, don't have to save it on the rust side
+     * @param ring_id of the device
+     * @return Vec<String> where each string is a supported datatype
+     */
+    pub fn get_datatypes(ring_id: &String) -> Vec<String> {
+        let mut datatypes = Vec::new();
+        let conn = rusqlite::Connection::open("rori.db").unwrap();
+        let mut stmt = conn.prepare("SELECT additional_types FROM devices WHERE ring_id=:ring_id").unwrap();
+        let mut rows = stmt.query_named(&[(":ring_id", ring_id)]).unwrap();
+        if let Some(row) = rows.next() {
+            let row = row.unwrap();
+            let row: String = row.get(0);
+            let dts: Vec<&str> = row.split(' ').collect();
+            for dt in dts.into_iter() {
+                if dt != "" {
+                    datatypes.push(String::from(dt));
+                }
+            }
+        }
+        datatypes
+    }
+
+    /**
      * Insert new device
      * @param ring_id the ring id of this device
      * @param username username linked
@@ -86,8 +111,8 @@ impl Database {
      */
     pub fn insert_new_device(ring_id: &String, username: &String, devicename: &String) -> Result<i32, rusqlite::Error> {
         let conn = rusqlite::Connection::open("rori.db").unwrap();
-        let mut conn = conn.prepare("INSERT INTO devices (ring_id, username, devicename)
-                                     VALUES (:ring_id, :username, :devicename)").unwrap();
+        let mut conn = conn.prepare("INSERT INTO devices (ring_id, username, devicename, additional_types)
+                                     VALUES (:ring_id, :username, :devicename, \"\")").unwrap();
         conn.execute_named(&[(":ring_id", ring_id), (":username", username), (":devicename", devicename)])
     }
 
@@ -226,6 +251,19 @@ impl Database {
             return true;
         }
         false
+    }
+
+    /**
+     * Set additional supported types for a device
+     * @param ring_id of the device to modify
+     * @param datatypes to set
+     * @return if success
+     */
+    pub fn set_datatypes(ring_id: &String, datatypes: Vec<String>) -> Result<i32, rusqlite::Error> {
+        let datatypes = datatypes.join(" ");
+        let conn = rusqlite::Connection::open("rori.db").unwrap();
+        let mut stmt = conn.prepare("UPDATE devices SET additional_types=:additional_types WHERE ring_id=:ring_id").unwrap();
+        stmt.execute_named(&[(":ring_id", ring_id), (":additional_types", &String::from(datatypes))])
     }
 
     /**
