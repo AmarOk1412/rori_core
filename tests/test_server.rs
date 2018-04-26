@@ -572,6 +572,9 @@ mod tests_server {
         users.push(tars);
         users.push(badtars);
         let mut server = setup(User::new(), users);
+        let _ = Database::insert_new_device(&String::from("Tars_id"), &String::from("Tars"), &String::from(""));
+        let _ = Database::insert_new_device(&String::from("Tars_id1"), &String::from("Tars"), &String::from(""));
+        let _ = Database::insert_new_device(&String::from("Tars_pc"), &String::from("Tars_pc"), &String::from(""));
 
         // Tars_pc do a /add_device pc of Tars_id (should fails because of it's someone else device)
         server.handle_interaction(Interaction {
@@ -603,7 +606,7 @@ mod tests_server {
             let has_new_info = storage.lock().unwrap().new_info.load(Ordering::SeqCst);
             if has_new_info {
                 let interactions = storage.lock().unwrap().interactions_sent.clone();
-                assert!(interactions.len() != 0);
+                assert!(interactions.len() == 2);
                 break;
             }
             thread::sleep(hundred_millis);
@@ -636,7 +639,7 @@ mod tests_server {
         // Tars_id do a /add_device (should fails)
         server.handle_interaction(Interaction {
             author_ring_id: String::from("Tars_id"),
-            body: String::from("/add_device  "),
+            body: String::from("/add_device"),
             datatype: String::from("rori/command"),
             time: time::now()
         });

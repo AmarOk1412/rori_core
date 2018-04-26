@@ -239,6 +239,14 @@ impl Daemon {
     }
 
     /**
+     * emit accountsChanged()
+     * @param self
+     */
+    pub fn emit_account_changed(&mut self) {
+        self.emit_account_changed.store(true, Ordering::SeqCst);
+    }
+
+    /**
      * Stop the execution of the mock
      * @param self
      */

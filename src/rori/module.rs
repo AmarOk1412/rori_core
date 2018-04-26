@@ -99,9 +99,7 @@ impl Module {
         let interaction = serde_json::to_string(&interaction).unwrap_or(String::new());
         let continue_processing: bool =
             load_module.call(py, "exec_module", (self.path.clone(), interaction), None)
-                .unwrap()
-                .extract(py)
-                .unwrap();
+                .unwrap().extract(py).unwrap();
         continue_processing
     }
 }

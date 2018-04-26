@@ -10,6 +10,7 @@ mod tests_manager {
     use core::rori::manager::Manager;
     use mocks::Daemon;
     use std::fs;
+    use std::sync::atomic::{AtomicBool, Ordering};
     use std::sync::{Arc, Mutex};
     use std::time::Duration;
     use std::thread;
@@ -70,6 +71,41 @@ mod tests_manager {
             None => { panic!("Space core not found") }
         };
 
+        daemon.lock().unwrap().stop();
+        let _ = daemon_thread.join();
+        teardown();
+    }
+
+
+    #[test]
+    // Scenario
+    // 1. Ensures that a manager correctly handle signals
+    fn manager_handle_signals() {
+        setup();
+        let daemon = Arc::new(Mutex::new(Daemon::new()));
+        let cloned_daemon = daemon.clone();
+        let daemon_thread = thread::spawn(move|| {
+            Daemon::run(cloned_daemon);
+        });
+        let one_sec = Duration::from_millis(1000);
+        thread::sleep(one_sec);
+
+        let shared_manager : Arc<Mutex<Manager>> = Arc::new(Mutex::new(
+            Manager::init("GLaDOs_id")
+            .ok().expect("Can't initialize ConfigurationManager"))
+        );
+        let shared_manager_cloned = shared_manager.clone();
+        let stop = Arc::new(AtomicBool::new(false));
+        let stop_cloned = stop.clone();
+        let test = thread::spawn(move || {
+            Manager::handle_signals(shared_manager_cloned, stop_cloned);
+        });
+        let two_sec = Duration::from_millis(1000);
+        thread::sleep(two_sec);
+        daemon.lock().unwrap().emit_account_changed();
+        stop.store(true, Ordering::SeqCst);
+
+        let _ = test.join();
         daemon.lock().unwrap().stop();
         let _ = daemon_thread.join();
         teardown();

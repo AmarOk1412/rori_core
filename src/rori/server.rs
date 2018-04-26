@@ -272,19 +272,11 @@ impl Server {
     fn add_contact(&self, account_id: &str, from: &str) {
         let method = "addContact";
         let dbus_msg = Message::new_method_call(self.ring_dbus, self.configuration_path, self.configuration_iface,
-                                                method);
-        if !dbus_msg.is_ok() {
-            error!("method call fails. Please verify daemon's API.");
-            return;
-        }
-        let conn = Connection::get_private(BusType::Session);
-        if !conn.is_ok() {
-            error!("connection not ok.");
-            return;
-        }
-        let dbus = conn.unwrap();
+                                                method).ok().expect("method call fails. Please verify daemon's API.");
+        let dbus = Connection::get_private(BusType::Session).ok().expect("connection not ok.");
         let _ = dbus.send_with_reply_and_block(
-            dbus_msg.unwrap().append2(account_id, from), 2000).unwrap();
+                    dbus_msg.append2(account_id, from), 2000
+                ).unwrap();
     }
 
     /**

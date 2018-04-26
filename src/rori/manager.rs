@@ -135,23 +135,12 @@ impl Manager {
         let details = Dict::new(details.iter());
         let dbus_msg = Message::new_method_call("cx.ring.Ring", "/cx/ring/Ring/ConfigurationManager",
                                                 "cx.ring.Ring.ConfigurationManager",
-                                                "addAccount");
-        if !dbus_msg.is_ok() {
-            error!("addAccount fails. Please verify daemon's API.");
-            return;
-        }
-        let conn = Connection::get_private(BusType::Session);
-        if !conn.is_ok() {
-            return;
-        }
-        let dbus = conn.unwrap();
-        let response = dbus.send_with_reply_and_block(dbus_msg.unwrap()
-                                                                .append1(details), 2000).unwrap();
+                                                "addAccount")
+                                                .ok().expect("addAccount fails. Please verify daemon's API.");
+        let dbus = Connection::get_private(BusType::Session).ok().expect("dbus connection not ok");
+        let response = dbus.send_with_reply_and_block(dbus_msg.append1(details), 2000).unwrap();
         // addAccount returns one argument, which is a string.
-        let account_added: &str  = match response.get1() {
-            Some(account) => account,
-            None => ""
-        };
+        let account_added: &str  = response.get1().unwrap_or("");
         info!("New account: {:?}", account_added);
     }
 
@@ -163,22 +152,12 @@ impl Manager {
         let mut account_list: Vec<Account> = Vec::new();
         let dbus_msg = Message::new_method_call("cx.ring.Ring", "/cx/ring/Ring/ConfigurationManager",
                                                 "cx.ring.Ring.ConfigurationManager",
-                                                "getAccountList");
-        if !dbus_msg.is_ok() {
-            error!("getAccountList fails. Please verify daemon's API.");
-            return account_list;
-        }
-        let conn = Connection::get_private(BusType::Session);
-        if !conn.is_ok() {
-            return account_list;
-        }
-        let dbus = conn.unwrap();
-        let response = dbus.send_with_reply_and_block(dbus_msg.unwrap(), 2000).unwrap();
+                                                "getAccountList")
+                                                .ok().expect("getAccountList fails. Please verify daemon's API.");
+        let dbus = Connection::get_private(BusType::Session).ok().expect("dbus connection not ok");
+        let response = dbus.send_with_reply_and_block(dbus_msg, 2000).unwrap();
         // getAccountList returns one argument, which is an array of strings.
-        let accounts: Array<&str, _>  = match response.get1() {
-            Some(array) => array,
-            None => return account_list
-        };
+        let accounts: Array<&str, _>  = response.get1().unwrap();
         for account in accounts {
             account_list.push(Manager::build_account(account));
         }
