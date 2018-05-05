@@ -47,6 +47,11 @@ print('add name module')
 arguments = '("name", 2, 1, "text", "^(quel est? ton.{0,30}nom.{0,40})|qui e(s|t).{0,4}(tu|vous)|o(u|ù)vien(s|t).ton.{0,20}nom|say.your.name|what.is.your.name|who.are.you|why.rori|rori.{0,100}come.from", "talk/name")'
 c.execute('INSERT INTO modules (name, priority, enabled, type, condition, path) VALUES' + arguments)
 
+# talk/humor
+print('add humor module')
+arguments = '("humor", 2, 1, "text", "(c|ç)a.va.{0,10}$|tu.{0,30}va(s| ?).{0,30}(bien|mal|comment|bof)|are you ok|comment.{0,30}va(s| ?)|how are you", "talk/humor")'
+c.execute('INSERT INTO modules (name, priority, enabled, type, condition, path) VALUES' + arguments)
+
 # music/music_start
 print('add music_start module')
 arguments = '("music_start", 1, 1, "text", "^(musi(c|que) ?!?)|((play|lance|joue).{1,30}(musi(c|que) ?!?))$", "music/start")'
