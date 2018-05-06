@@ -62,6 +62,11 @@ print('add alarm module')
 arguments = '("alarm", 2, 1, "text", "(wake|veille).{0,100}(in|at|dans|à|a).([0-9]+)(:|h|.*)([0-9]*)", "talk/alarm")'
 c.execute('INSERT INTO modules (name, priority, enabled, type, condition, path) VALUES' + arguments)
 
+# talk/blackscreen
+print('add blackscreen module')
+arguments = '("blackscreen", 2, 1, "text", "^((é|e)cran.noir|black.?screen|(go to | ?)sleep|(vas | ?)dor(s|t|mir))", "command/blackscreen")'
+c.execute('INSERT INTO modules (name, priority, enabled, type, condition, path) VALUES' + arguments)
+
 # music/music_start
 print('add music_start module')
 arguments = '("music_start", 1, 1, "text", "^(musi(c|que) ?!?)|((play|lance|joue).{1,30}(musi(c|que) ?!?))$", "music/start")'
