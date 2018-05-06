@@ -1,7 +1,7 @@
 language: rust
 rust:
   - stable
-  - nightly
+  - nightly-2018-03-18
 sudo: true
 git:
     submodules: false
@@ -12,7 +12,7 @@ install:
   - sudo apt-get install -y libdbus-1-dev openssl
   - |
     # tarpaulin deps
-    if [[ "$TRAVIS_RUST_VERSION" == nightly ]]; then
+    if [[ "$TRAVIS_RUST_VERSION" == nightly-2018-03-18 ]]; then
       sudo apt-get update -y && sudo apt-get -y install libssl-dev pkg-config cmake zlib1g-dev;
       cargo install cargo-tarpaulin;
     fi
@@ -23,9 +23,10 @@ before_script:
   - sleep 3 # give xvfb some time to start
 script:
   - cargo build
+  - make test_keys
   - RUST_TEST_THREADS=1 cargo test -- --nocapture
   - |
     # tarpaulin deps
-    if [[ "$TRAVIS_RUST_VERSION" == nightly ]]; then
+    if [[ "$TRAVIS_RUST_VERSION" == nightly-2018-03-18 ]]; then
       cargo tarpaulin --ciserver travis-ci --coveralls $TRAVIS_JOB_ID;
     fi

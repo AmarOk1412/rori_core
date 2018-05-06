@@ -20,6 +20,13 @@ keys:
 	openssl req -x509 -newkey rsa:4096 -nodes -keyout keys/localhost.key -out keys/localhost.crt -days 3650
 	openssl pkcs12 -export -out keys/api.p12 -inkey keys/localhost.key -in keys/localhost.crt
 
+test_keys:
+	# Used for test/
+	rm -rf test_keys
+	mkdir -p test_keys
+	openssl req -x509 -newkey rsa:4096 -nodes -keyout test_keys/localhost.key -out test_keys/localhost.crt -days 3650  -subj "/C=CA/ST=Quebec/L=Montreal/O=Enconn/CN=enconn.fr"
+	openssl pkcs12 -export -out test_keys/api.p12 -inkey test_keys/localhost.key -in test_keys/localhost.crt -passout pass:
+
 docker:
 	docker build -t rori_core -f docker/ubuntu_17 .
 

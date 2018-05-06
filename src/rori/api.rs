@@ -67,17 +67,6 @@ impl API {
         }
     }
 
-
-    // Just for testing
-    pub fn new_http(manager: Arc<Mutex<Manager>>, address: String) -> API {
-        API {
-            address: address,
-            cert_path: String::new(),
-            cert_pass: String::new(),
-            manager: manager
-        }
-    }
-
     /**
      * Launch an API instance
      * @param self
@@ -88,19 +77,12 @@ impl API {
         let name_handler = NameHandler {
             manager: self.manager.clone()
         };
-        if self.cert_path.len() > 0 {
-            let ssl = NativeTlsServer::new(&*self.cert_path, &*self.cert_pass).unwrap();
-            router.get("/name/:name", name_handler, "name");
-            info!("start API endpoint at {}", self.address);
-            // Start router
-            Iron::new(router).https(&*self.address, ssl).unwrap();
-        } else {
-            let mut router = Router::new();
-            router.get("/name/:name", name_handler, "name");
-            info!("start API endpoint at {}", self.address);
-            // Start router
-            Iron::new(router).http(&*self.address).unwrap();
-        }
+
+        let ssl = NativeTlsServer::new(&*self.cert_path, &*self.cert_pass).unwrap();
+        router.get("/name/:name", name_handler, "name");
+        info!("start API endpoint at {}", self.address);
+        // Start router
+        Iron::new(router).https(&*self.address, ssl).unwrap();
     }
 }
 

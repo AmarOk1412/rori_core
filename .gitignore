@@ -6,6 +6,7 @@ Cargo.lock
 # RORI config related
 rori.db
 keys/
+test_keys/
 config.json
 
 # Modules related

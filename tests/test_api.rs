@@ -16,6 +16,7 @@ mod tests_api {
     use reqwest;
     use serde_json::{Value, from_str};
     use std::fs;
+    use std::io::Read;
     use std::sync::{Arc, Mutex};
     use std::time::Duration;
     use std::thread;
@@ -58,33 +59,62 @@ mod tests_api {
                 time: time::now()
             });
             // NOTE: for simplicity, test with an http endpoint (no certificate verification to do)
-            let mut api = API::new_http(m, String::from("0.0.0.0:1412"));
+            let mut api = API::new(m, String::from("0.0.0.0:1412"),
+                                   String::from("./test_keys/api.p12"), String::new());
             api.start();
         });
 
         let three_secs = Duration::from_millis(3000);
         thread::sleep(three_secs);
 
-        let body = reqwest::get("http://127.0.0.1:1412/name/rori").unwrap()
-                            .text().unwrap();
+        let client = reqwest::ClientBuilder::new()
+                    .danger_disable_certificate_validation_entirely()
+                    .build().unwrap();
+
+        let mut res = match client.get("https://127.0.0.1:1412/name/rori").send() {
+            Ok(res) => res,
+            _ => {
+                panic!("Can't get good result from API");
+            }
+        };
+        let mut body: String = String::new();
+        let _ = res.read_to_string(&mut body);
         let v: Value = from_str(&body).unwrap();
         assert!(v["name"] == "rori");
         assert!(v["addr"] == "GLaDOs_ring_id");
 
-        let body = reqwest::get("http://127.0.0.1:1412/name/weasley").unwrap()
-                            .text().unwrap();
+        let mut res = match client.get("https://127.0.0.1:1412/name/weasley").send() {
+            Ok(res) => res,
+            _ => {
+                panic!("Can't get good result from API");
+            }
+        };
+        let mut body: String = String::new();
+        let _ = res.read_to_string(&mut body);
         let v: Value = from_str(&body).unwrap();
         assert!(v["name"] == "weasley");
         assert!(v["addr"] == "Weasley");
 
-        let body = reqwest::get("http://127.0.0.1:1412/name/weasley_core").unwrap()
-                            .text().unwrap();
+        let mut res = match client.get("https://127.0.0.1:1412/name/weasley_core").send() {
+            Ok(res) => res,
+            _ => {
+                panic!("Can't get good result from API");
+            }
+        };
+        let mut body: String = String::new();
+        let _ = res.read_to_string(&mut body);
         let v: Value = from_str(&body).unwrap();
         assert!(v["name"] == "weasley_core");
         assert!(v["addr"] == "Weasley");
 
-        let body = reqwest::get("http://127.0.0.1:1412/name/eve").unwrap()
-                            .text().unwrap();
+        let mut res = match client.get("https://127.0.0.1:1412/name/eve").send() {
+            Ok(res) => res,
+            _ => {
+                panic!("Can't get good result from API");
+            }
+        };
+        let mut body: String = String::new();
+        let _ = res.read_to_string(&mut body);
         let v: Value = from_str(&body).unwrap();
         assert!(v["error"] == "name not registred");
 
