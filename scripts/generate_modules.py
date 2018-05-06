@@ -57,6 +57,11 @@ print('add sing module')
 arguments = '("sing", 2, 1, "text", "^(tu peux| ?)chante(r| ?)|sing", "talk/sing")'
 c.execute('INSERT INTO modules (name, priority, enabled, type, condition, path) VALUES' + arguments)
 
+# talk/alarm
+print('add alarm module')
+arguments = '("alarm", 2, 1, "text", "(wake|veille).{0,100}(in|at|dans|à|a).([0-9]+)(:|h|.*)([0-9]*)", "talk/alarm")'
+c.execute('INSERT INTO modules (name, priority, enabled, type, condition, path) VALUES' + arguments)
+
 # music/music_start
 print('add music_start module')
 arguments = '("music_start", 1, 1, "text", "^(musi(c|que) ?!?)|((play|lance|joue).{1,30}(musi(c|que) ?!?))$", "music/start")'
