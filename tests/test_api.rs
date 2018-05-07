@@ -81,7 +81,7 @@ mod tests_api {
         let _ = res.read_to_string(&mut body);
         let v: Value = from_str(&body).unwrap();
         assert!(v["name"] == "rori");
-        assert!(v["addr"] == "GLaDOs_ring_id");
+        assert!(v["addr"] == "0xGLaDOs_ring_id");
 
         let mut res = match client.get("https://127.0.0.1:1412/name/weasley").send() {
             Ok(res) => res,
@@ -93,7 +93,7 @@ mod tests_api {
         let _ = res.read_to_string(&mut body);
         let v: Value = from_str(&body).unwrap();
         assert!(v["name"] == "weasley");
-        assert!(v["addr"] == "Weasley");
+        assert!(v["addr"] == "0xWeasley");
 
         let mut res = match client.get("https://127.0.0.1:1412/name/weasley_core").send() {
             Ok(res) => res,
@@ -105,7 +105,7 @@ mod tests_api {
         let _ = res.read_to_string(&mut body);
         let v: Value = from_str(&body).unwrap();
         assert!(v["name"] == "weasley_core");
-        assert!(v["addr"] == "Weasley");
+        assert!(v["addr"] == "0xWeasley");
 
         let mut res = match client.get("https://127.0.0.1:1412/name/eve").send() {
             Ok(res) => res,

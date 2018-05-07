@@ -124,7 +124,7 @@ impl Handler for NameHandler {
         if ring_id.len() > 0 {
             let answer = NameResponse {
                 name: String::from(name),
-                addr: ring_id.replace("ring:", "0x"),
+                addr: format!("0x{}", ring_id.replace("ring:", "")),
             };
             let response = serde_json::to_string(&answer).unwrap_or(String::new());
             return Ok(Response::with((content_type, status::Ok, response)))
