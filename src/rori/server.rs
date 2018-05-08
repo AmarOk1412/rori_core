@@ -341,7 +341,7 @@ impl Server {
      */
     fn try_link_new_device(&mut self, from_id: &String, argument: &String) {
         // Retrieve users from database
-        let account_id = self.account.id.clone();
+        // TODO inform user that a new device is linked?
         let (from_id, from_user, _) = Database::get_device(from_id);
         let mut do_push = true; // if we must store a temporary item to remember the order
         let mut do_clean = false; // user linked, the temporary item is not necessary anymore
@@ -360,7 +360,7 @@ impl Server {
                         let msg = format!("{} linked to {}", from_id, argument);
                         info!("{}", msg);
                         self.move_ring_to_user(&id, &account);
-                        self.send_interaction(&*account_id, &*id, &*msg);
+                        self.send_interaction(&*id, &*from_id, &*format!("{{\"registered\":true, \"username\":\"{}\"}}", argument));
                         break;
                     }
                 }
@@ -378,7 +378,7 @@ impl Server {
                         let msg = format!("{} linked to {}", argument, from_user);
                         info!("{}", msg);
                         self.move_ring_to_user(&id, &account);
-                        self.send_interaction(&*account_id, &*id, &*msg);
+                        self.send_interaction(&*id, &*from_id, &*format!("{{\"registered\":true, \"username\":\"{}\"}}", from_user));
                         break;
                     }
                 }
@@ -413,41 +413,34 @@ impl Server {
         if from_user != &*mod_user {
             let err = format!("!!!!!{} trying to register device with different user ({}) ", from_id, mod_id);
             warn!("{}", err);
-            self.send_interaction(&*id, &*from_id, &*err);
-            self.send_interaction(&*id, &*mod_id, &*err);
+            self.send_interaction(&*id, &*from_id, &*format!("{{\"registered\":false, \"username\":\"{}\", \"err\":\"bad_register error from device {}\"}}", username, from_id));
+            self.send_interaction(&*id, &*mod_id, &*format!("{{\"registered\":false, \"username\":\"{}\", \"err\":\"bad_register error from device {}\"}}", username, from_id));
             return;
         }
         // Search if it's already registered
         if self.get_ring_id(&format!("{}_{}", username, devicename)).len() > 0 {
             let err = format!("registering {} for {} failed because devicename was found", devicename, ring_id);
             warn!("{}", err);
-            self.send_interaction(&*id, ring_id, &*err);
+            self.send_interaction(&*id, ring_id, &*format!("{{\"registered\":false, \"devicename\":\"{}\", \"err\":\"{}_{} already registered\"}}", devicename, username, devicename));
         } else {
             // register device
-            match Database::update_devicename(ring_id, devicename) {
-                Ok(_) => {
-                    // Update device for user
-                    for registered in &mut self.registered_users {
-                        if registered.name == *username {
-                            for device in &mut registered.devices {
-                                if device.ring_id == *ring_id {
-                                    device.name = devicename.clone();
-                                    break;
-                                }
-                            }
+            Database::update_devicename(ring_id, devicename)
+            .ok().expect(&*format!("registering {} for {} failed when updating db", devicename, ring_id));
+            // Update device for user
+            for registered in &mut self.registered_users {
+                if registered.name == *username {
+                    for device in &mut registered.devices {
+                        if device.ring_id == *ring_id {
+                            device.name = devicename.clone();
+                            break;
                         }
                     }
-                    // And inform user
-                    let msg = format!("{} is now known as {}_{}", ring_id, username, devicename);
-                    info!("{}", msg);
-                    self.send_interaction(&*id, &*from_id, &*msg);
-                },
-                _ => {
-                    let err = format!("registering {} for {} failed when updating db", devicename, ring_id);
-                    warn!("{}", err);
-                    self.send_interaction(&*id, &*from_id, &*err);
                 }
             }
+            // And inform user
+            let msg = format!("{} is now known as {}_{}", ring_id, username, devicename);
+            info!("{}", msg);
+            self.send_interaction(&*id, &*from_id, &*format!("{{\"registered\":true, \"devicename\":\"{}\"", devicename));
         }
     }
 
@@ -463,30 +456,23 @@ impl Server {
         if self.get_ring_id(username).len() > 0 {
             let err = format!("registering {} for {} failed because username was found", username, ring_id);
             warn!("{}", err);
-            self.send_interaction(&*id, ring_id, &*err);
+            self.send_interaction(&*id, ring_id, &*format!("{{\"registered\":false, \"username\":\"{}\", \"err\":\"{} already registered\"}}", username, username));
         } else {
             // Register!
-            match Database::update_username(ring_id, username) {
-                Ok(_) => {
-                    // Remove from anonymous_user
-                    let index = self.anonymous_user.devices.iter().position(|d| d.ring_id == *ring_id).unwrap();
-                    self.anonymous_user.devices.remove(index);
-                    // Create new user
-                    let mut new_user = User::new();
-                    new_user.name = username.clone();
-                    new_user.devices.push(Device::new(ring_id));
-                    self.registered_users.push(new_user);
-                    // Inform user that they is registered.
-                    let msg = format!("{} is now known as {}", ring_id, username);
-                    info!("{}", msg);
-                    self.send_interaction(&*id, ring_id, &*format!("{{\"registered\":true, \"username\":\"{}\"}}", username));
-                },
-                _ => {
-                    let err = format!("registering {} for {} failed when updating db", username, ring_id);
-                    warn!("{}", err);
-                    self.send_interaction(&*id, ring_id, "{\"registered\":false}");
-                }
-            }
+            Database::update_username(ring_id, username)
+            .ok().expect(&*format!("registering {} for {} failed when updating db", username, ring_id));
+            // Remove from anonymous_user
+            let index = self.anonymous_user.devices.iter().position(|d| d.ring_id == *ring_id).unwrap();
+            self.anonymous_user.devices.remove(index);
+            // Create new user
+            let mut new_user = User::new();
+            new_user.name = username.clone();
+            new_user.devices.push(Device::new(ring_id));
+            self.registered_users.push(new_user);
+            // Inform user that they is registered.
+            let msg = format!("{} is now known as {}", ring_id, username);
+            info!("{}", msg);
+            self.send_interaction(&*id, ring_id, &*format!("{{\"registered\":true, \"username\":\"{}\"}}", username));
         }
     }
 
@@ -504,8 +490,8 @@ impl Server {
         if from_user != &*mod_user {
             let err = format!("!!!!!{} trying to revoke device with different user ({}) ", from_id, mod_id);
             warn!("{}", err);
-            self.send_interaction(&*id, &*from_id, &*err);
-            self.send_interaction(&*id, &*mod_id, &*err);
+            self.send_interaction(&*id, &*from_id, &*format!("{{\"registered\":false, \"username\":\"{}\", \"err\":\"try to remove incorrect device from {}\"}}", from_user, from_id));
+            self.send_interaction(&*id, &*mod_id, &*format!("{{\"registered\":false, \"username\":\"{}\", \"err\":\"try to remove incorrect device from {}\"}}", from_user, from_id));
             return;
         }
         // Remove the device
@@ -542,10 +528,11 @@ impl Server {
         if success {
             msg = format!("{} device name revoked", ring_id);
             info!("{}", msg);
+            self.send_interaction(&*id, &*from_id, &*format!("{{\"registered\":false, \"device\":\"{}\"}}", ring_id));
         } else {
+            self.send_interaction(&*id, &*from_id, &*format!("{{\"registered\":true, \"device\":\"{}\", \"err\":\"device not found\"}}", ring_id));
             warn!("{}", msg);
         }
-        self.send_interaction(&*id, ring_id, &*msg);
     }
 
     /**
@@ -584,7 +571,8 @@ impl Server {
                     info!("update device {} for {}", device.ring_id, registered.name);
                 }
                 let mut msg = format!("{} unregistered", registered.name);
-                self.send_interaction(&*id, ring_id, &*msg);
+                info!("{}", msg);
+                self.send_interaction(&*id, ring_id, &*format!("{{\"registered\":false, \"username\":\"{}\"}}", registered.name));
                 break;
             }
             idx += 1;
