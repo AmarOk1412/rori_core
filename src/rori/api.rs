@@ -33,6 +33,7 @@ use iron::mime::Mime;
 use iron::status;
 use router::Router;
 use rori::manager::Manager;
+use rori::database::Database;
 use serde_json;
 use std::sync::{Arc, Mutex};
 
@@ -77,9 +78,11 @@ impl API {
         let name_handler = NameHandler {
             manager: self.manager.clone()
         };
+        let addr_handler = AddrHandler { };
 
         let ssl = NativeTlsServer::new(&*self.cert_path, &*self.cert_pass).unwrap();
         router.get("/name/:name", name_handler, "name");
+        router.get("/addr/:addr", addr_handler, "addr");
         info!("start API endpoint at {}", self.address);
         // Start router
         Iron::new(router).https(&*self.address, ssl).unwrap();
@@ -120,7 +123,7 @@ impl Handler for NameHandler {
         info!("GET /name/{}", name);
         // Translate nickname to a ring_id
         let ring_id = self.manager.lock().unwrap().server.get_ring_id(&String::from(name));
-        // BUild the response
+        // Build the response
         if ring_id.len() > 0 {
             let answer = NameResponse {
                 name: String::from(name),
@@ -131,6 +134,49 @@ impl Handler for NameHandler {
         }
         let answer = NameError {
             error: String::from("name not registred")
+        };
+        let response = serde_json::to_string(&answer).unwrap_or(String::new());
+        Ok(Response::with((content_type, status::NotFound, response)))
+    }
+}
+
+struct AddrHandler { }
+
+/**
+ * Used if success addr's query
+ */
+#[derive(Serialize, Deserialize)]
+struct AddrResponse {
+    name: String,
+}
+
+/**
+ * Used if an error occurs
+ */
+#[derive(Serialize, Deserialize)]
+struct AddrError {
+    error: String,
+}
+
+impl Handler for AddrHandler {
+    fn handle(&self, request: &mut Request) -> IronResult<Response> {
+        let content_type = "application/json".parse::<Mime>().unwrap();
+        let ring_id = request.extensions.get::<Router>().unwrap().find("addr").unwrap_or("");
+        info!("GET /addr/{}", ring_id);
+
+        // get username
+        let (found_id, username, _) = Database::get_device(&String::from(ring_id));
+
+        // Build the response
+        if found_id.len() > 0 {
+            let answer = AddrResponse {
+                name: username,
+            };
+            let response = serde_json::to_string(&answer).unwrap_or(String::new());
+            return Ok(Response::with((content_type, status::Ok, response)))
+        }
+        let answer = NameError {
+            error: String::from("address not registred")
         };
         let response = serde_json::to_string(&answer).unwrap_or(String::new());
         Ok(Response::with((content_type, status::NotFound, response)))

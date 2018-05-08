@@ -97,9 +97,8 @@ impl Module {
         // This will execute the linked module
         let load_module = py.import("rori_modules.load_module").unwrap();
         let interaction = serde_json::to_string(&interaction).unwrap_or(String::new());
-        let continue_processing: bool =
-            load_module.call(py, "exec_module", (self.path.clone(), interaction), None)
-                .unwrap().extract(py).unwrap();
+        let continue_processing: bool = load_module.call(py, "exec_module",
+            (self.path.clone(), interaction), None).unwrap().extract(py).unwrap();
         continue_processing
     }
 }

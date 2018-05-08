@@ -58,7 +58,6 @@ mod tests_api {
                 datatype: String::from("rori/command"),
                 time: time::now()
             });
-            // NOTE: for simplicity, test with an http endpoint (no certificate verification to do)
             let mut api = API::new(m, String::from("0.0.0.0:1412"),
                                    String::from("./test_keys/api.p12"), String::new());
             api.start();
@@ -117,6 +116,64 @@ mod tests_api {
         let _ = res.read_to_string(&mut body);
         let v: Value = from_str(&body).unwrap();
         assert!(v["error"] == "name not registred");
+
+        daemon.lock().unwrap().stop();
+        let _ = daemon_thread.join();
+        teardown();
+    }
+
+    #[test]
+    // Scenario
+    // 1. get /addr/user_id
+    // 2. get /addr/not_user_id
+    fn api_get_addr() {
+        setup();
+        let daemon = Arc::new(Mutex::new(Daemon::new()));
+        let cloned_daemon = daemon.clone();
+        let daemon_thread = thread::spawn(move|| {
+            Daemon::run(cloned_daemon);
+        });
+        let _ = thread::spawn(move|| {
+            let m = Arc::new(Mutex::new(Manager::init("GLaDOs_id").unwrap()));
+            m.lock().unwrap().server.handle_interaction(Interaction {
+                author_ring_id: String::from("weasley_id"),
+                body: String::from("/register weasley"),
+                datatype: String::from("rori/command"),
+                time: time::now()
+            });
+            let mut api = API::new(m, String::from("0.0.0.0:1413"),
+                                   String::from("./test_keys/api.p12"), String::new());
+            api.start();
+        });
+
+        let three_secs = Duration::from_millis(3000);
+        thread::sleep(three_secs);
+
+        let client = reqwest::ClientBuilder::new()
+                    .danger_disable_certificate_validation_entirely()
+                    .build().unwrap();
+
+        let mut res = match client.get("https://127.0.0.1:1413/addr/weasley_id").send() {
+            Ok(res) => res,
+            _ => {
+                panic!("Can't get good result from API");
+            }
+        };
+        let mut body: String = String::new();
+        let _ = res.read_to_string(&mut body);
+        let v: Value = from_str(&body).unwrap();
+        assert!(v["name"] == "weasley");
+
+        let mut res = match client.get("https://127.0.0.1:1413/addr/eve").send() {
+            Ok(res) => res,
+            _ => {
+                panic!("Can't get good result from API");
+            }
+        };
+        let mut body: String = String::new();
+        let _ = res.read_to_string(&mut body);
+        let v: Value = from_str(&body).unwrap();
+        assert!(v["error"] == "address not registred");
 
         daemon.lock().unwrap().stop();
         let _ = daemon_thread.join();
