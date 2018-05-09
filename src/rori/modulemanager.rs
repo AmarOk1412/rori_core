@@ -26,6 +26,7 @@
  **/
 use rori::database::Database;
 use rori::interaction::Interaction;
+use std::sync::{Arc, Mutex};
 use std::thread;
 
 /**
@@ -51,7 +52,7 @@ impl ModuleManager {
      * @param self
      */
     pub fn process(&self) {
-        let mut stop = false;
+        let stop = Arc::new(Mutex::new(false));
         // get_descending_priorities will skip non exisiting priorities
         // will be something like [0, 1, 3, 4, 7...]
         for priority in Database::get_descending_priorities() {
@@ -61,13 +62,14 @@ impl ModuleManager {
             let mut children = vec![];
             for module in modules {
                 let interaction = self.interaction.clone();
+                let stop_cloned = stop.clone();
                 children.push(thread::spawn(move || {
                     if module.condition.is_fulfilled_by(&interaction) {
                         info!("{} module's condition fulfilled. Exec module", module.name);
                         let result = module.exec(&interaction);
                         if !result {
                             info!("{} asks RORI to stop. Stopping at the next priority...", module.name);
-                            stop = true;
+                            *stop_cloned.lock().unwrap() = true;
                         }
                     } else {
                         info!("{} module's condition not fulfilled.", module.name);
@@ -78,7 +80,7 @@ impl ModuleManager {
                 // Wait for the thread to finish. Returns a result.
                 let _ = child.join();
             }
-            if stop {
+            if *stop.lock().unwrap() {
                 break;
             }
         }

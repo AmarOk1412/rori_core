@@ -52,6 +52,12 @@ mod tests_server {
         let mut req = conn.prepare("INSERT INTO modules (name, priority, enabled, type, condition, path)
                                     VALUES (\"hello_world\", 1, 1, \"text\", \"^(salut|bonjour|bonsoir|hei|hi|hello|yo|o/)( rori| ?!?)$\", \"talk/hello_world\")").unwrap();
         let _ = req.execute(&[]);
+        let mut req = conn.prepare("INSERT INTO modules (name, priority, enabled, type, condition, path)
+                                    VALUES (\"name\", 2, 1, \"text\", \"name\", \"talk/name\")").unwrap();
+        let _ = req.execute(&[]);
+        let mut req = conn.prepare("INSERT INTO modules (name, priority, enabled, type, condition, path)
+                                    VALUES (\"name_duplicate\", 3, 1, \"text\", \"name\", \"talk/name\")").unwrap();
+        let _ = req.execute(&[]);
 
         let account = Account {
             id: String::from("GLaDOs_id"),
@@ -94,7 +100,7 @@ mod tests_server {
         let modules = Database::get_enabled_modules(1);
         assert!(modules.len() == 1);
         assert!(modules.first().unwrap().name == "hello_world");
-        let modules = Database::get_enabled_modules(2);
+        let modules = Database::get_enabled_modules(10);
         assert!(modules.len() == 0);
         teardown();
     }
@@ -105,7 +111,7 @@ mod tests_server {
     fn database_get_descending_priorities() {
         setup(User::new(), Vec::new());
         let priorities = Database::get_descending_priorities();
-        assert!(priorities.len() == 2);
+        assert!(priorities.len() == 4);
         assert!(*priorities.get(0).unwrap() == 0);
         assert!(*priorities.get(1).unwrap() == 1);
         teardown();
@@ -187,6 +193,46 @@ mod tests_server {
         });
 
         // This should has sent 1 message
+        let mut idx_signal = 0;
+        let hundred_millis = Duration::from_millis(100);
+        while idx_signal < 10 {
+            let storage = daemon.lock().unwrap().storage.clone();
+            let has_new_info = storage.lock().unwrap().new_info.load(Ordering::SeqCst);
+            if has_new_info {
+                let interactions = storage.lock().unwrap().interactions_sent.clone();
+                assert!(interactions.len() == 1);
+                break;
+            }
+            thread::sleep(hundred_millis);
+            idx_signal += 1;
+            if idx_signal == 10 {
+                panic!("interactions not set!");
+            }
+        }
+        teardown();
+        daemon.lock().unwrap().stop();
+        let _ = daemon_thread.join();
+    }
+
+    #[test]
+    // Scenario
+    // 1. Someone say name this should trigger only the first module and stop.
+    fn modules_test_stop_priorities() {
+        let daemon = Arc::new(Mutex::new(Daemon::new()));
+        let cloned_daemon = daemon.clone();
+        let daemon_thread = thread::spawn(move|| {
+            Daemon::run(cloned_daemon);
+        });
+        let mut server = setup(User::new(), Vec::new());
+        // Tars_id says name
+        server.handle_interaction(Interaction {
+            author_ring_id: String::from("PBody_id"),
+            body: String::from("name"),
+            datatype: String::from("text/plain"),
+            time: time::now()
+        });
+
+        // This should has sent 1 message (not 2!)
         let mut idx_signal = 0;
         let hundred_millis = Duration::from_millis(100);
         while idx_signal < 10 {
