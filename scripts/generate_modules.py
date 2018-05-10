@@ -62,12 +62,22 @@ print('add alarm module')
 arguments = '("alarm", 2, 1, "text", "(wake|veille).{0,100}(in|at|dans|à|a).([0-9]+)(:|h|.*)([0-9]*)", "talk/alarm")'
 c.execute('INSERT INTO modules (name, priority, enabled, type, condition, path) VALUES' + arguments)
 
-# talk/blackscreen
+# command/blackscreen
 print('add blackscreen module')
 arguments = '("blackscreen", 2, 1, "text", "^((é|e)cran.noir|black.?screen|(go to | ?)sleep|(vas | ?)dor(s|t|mir))", "command/blackscreen")'
 c.execute('INSERT INTO modules (name, priority, enabled, type, condition, path) VALUES' + arguments)
 
-# talk/lock
+# command/mutesound
+print('add mutesound module')
+arguments = '("mutesound", 2, 1, "text", "^(sourdine|muet|mute|coupe le son|no sound please)", "command/mutesound")'
+c.execute('INSERT INTO modules (name, priority, enabled, type, condition, path) VALUES' + arguments)
+
+# command/enablesound
+print('add enablesound module')
+arguments = '("enablesound", 2, 1, "text", "^(remet le |a?)son$|on.{0,20}sound|sound.{0,20}on|umute", "command/enablesound")'
+c.execute('INSERT INTO modules (name, priority, enabled, type, condition, path) VALUES' + arguments)
+
+# command/lock
 print('add lock module')
 arguments = '("lock", 2, 1, "text", "(ver(r| ?)ouil(l| ?)(e (l.ordi|le pc|l\'(é|e)cran|toi)|age)|bloque.toi)|^lock", "command/lock")'
 c.execute('INSERT INTO modules (name, priority, enabled, type, condition, path) VALUES' + arguments)
