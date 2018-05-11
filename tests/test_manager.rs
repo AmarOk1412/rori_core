@@ -79,8 +79,8 @@ mod tests_manager {
 
     #[test]
     // Scenario
-    // 1. Ensures that a manager correctly handle signals
-    fn manager_handle_signals() {
+    // 1. Ensures that a manager correctly handle signal incomingTrustRequest
+    fn manager_handle_signal_incoming_trust_request() {
         setup();
         let daemon = Arc::new(Mutex::new(Daemon::new()));
         let cloned_daemon = daemon.clone();
@@ -100,11 +100,44 @@ mod tests_manager {
         let test = thread::spawn(move || {
             Manager::handle_signals(shared_manager_cloned, stop_cloned);
         });
-        let two_sec = Duration::from_millis(1000);
-        thread::sleep(two_sec);
-        daemon.lock().unwrap().emit_account_changed();
-        stop.store(true, Ordering::SeqCst);
 
+        let two_sec = Duration::from_millis(5000);
+        thread::sleep(two_sec);
+        daemon.lock().unwrap().emit_incoming_trust_request();
+
+        // Contact should be added daemon side
+        let base_size = shared_manager.lock().unwrap().server.anonymous_user.devices.len();
+        let mut idx_signal = 0;
+        let hundred_millis = Duration::from_millis(100);
+        while idx_signal < 100 {
+            let storage = daemon.lock().unwrap().storage.clone();
+            let accepted = storage.lock().unwrap().request_accepted.clone();
+            let mut stop = false;
+            for acc in accepted {
+                if acc == "Eve" {
+                    stop = true;
+                    break;
+                }
+            }
+            if stop {
+                break;
+            }
+            thread::sleep(hundred_millis);
+            idx_signal += 1;
+        }
+
+        // A new anonymous user (Eve) should be present
+        assert!(shared_manager.lock().unwrap().server.anonymous_user.devices.len() == base_size + 1);
+        let mut weasley_found = false;
+        for device in shared_manager.lock().unwrap().server.anonymous_user.devices.clone() {
+            if device.ring_id == "Eve" {
+                weasley_found = true;
+                break;
+            }
+        }
+        assert!(weasley_found);
+
+        stop.store(true, Ordering::SeqCst);
         let _ = test.join();
         daemon.lock().unwrap().stop();
         let _ = daemon_thread.join();

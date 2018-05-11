@@ -1,6 +1,6 @@
 use core::rori::account::Account;
 use dbus::arg::{Array, Dict};
-use dbus::{Connection, BusType, NameFlag, tree};
+use dbus::{Connection, BusType, NameFlag, tree,};
 use dbus::tree::Factory;
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -14,6 +14,7 @@ pub struct Storage {
     pub interactions_sent: Vec<(String, String)>,
     pub account: Arc<Mutex<Account>>,
     pub accounts_added: Vec<HashMap<String, String>>,
+    pub request_accepted: Vec<String>,
 }
 
 // Every storage device has its own object path.
@@ -37,7 +38,7 @@ pub struct Daemon {
     pub stop: Arc<AtomicBool>,
     pub initialized: Arc<AtomicBool>,
     pub storage: Arc<Mutex<Storage>>,
-    emit_account_changed: Arc<AtomicBool>,
+    emit_incoming_trust_request: Arc<AtomicBool>,
 }
 
 impl Daemon {
@@ -60,8 +61,9 @@ impl Daemon {
                 interactions_sent: Vec::new(),
                 account: Arc::new(Mutex::new(glados_account)),
                 accounts_added: Vec::new(),
+                request_accepted: Vec::new(),
             })),
-            emit_account_changed: Arc::new(AtomicBool::new(false)),
+            emit_incoming_trust_request: Arc::new(AtomicBool::new(false)),
         }
     }
 
@@ -77,8 +79,14 @@ impl Daemon {
         connection.register_name(ring_dbus, NameFlag::ReplaceExisting as u32).unwrap();
         let f = Factory::new_fn::<(TData)>();
 
-        let account_changed = Some(Arc::new(f.signal("accountsChanged", ())));
-        let signal = account_changed.clone().unwrap();
+        let incoming_trust_request = Some(Arc::new(
+            f.signal("incomingTrustRequest", ())
+             .arg(("accountID", "s"))
+             .arg(("from", "s"))
+             .arg(("payload", "ay"))
+             .arg(("receiveTime", "t"))
+        ));
+        let signal = incoming_trust_request.clone().unwrap();
         let storage = daemon.lock().unwrap().storage.clone();
 
         let add_contact = f.method("addContact", (), move |m| {
@@ -159,7 +167,6 @@ impl Daemon {
                                    .in_arg(("accountID", "s"))
                                    .out_arg(("details", "a{ss}"));
 
-
         let get_contacts = f.method("getContacts", (), move |m| {
                                         let mut details = Vec::new();
                                         let mut contact = HashMap::new();
@@ -195,6 +202,18 @@ impl Daemon {
                               .in_arg(("accountID", "s"))
                               .in_arg(("enable", "b"));
 
+        let accept_trust_request = f.method("acceptTrustRequest", (), move |m| {
+                                   let storage: &Arc<Mutex<Storage>> = m.path.get_data();
+                                   let (_, from) = m.msg.get2::<&str, &str>();
+                                   let rm = m.msg.method_return();
+                                   let rm = rm.append1(true);
+                                   storage.lock().unwrap().request_accepted.push(from.unwrap_or("").to_string());
+                                   Ok(vec!(rm))
+                               })
+                               .in_arg(("accountID", "s"))
+                               .in_arg(("from", "s"))
+                               .out_arg(("success", "v"));
+
         // We create a tree with one object path inside and make that path introspectable.
         let tree = f.tree(())
                     .add(f.object_path(configuration_path, storage.clone()).introspectable().add(
@@ -207,6 +226,7 @@ impl Daemon {
                          .add_m(get_account_details)
                          .add_m(get_contacts)
                          .add_m(send_register)
+                         .add_m(accept_trust_request)
                          .add_s(signal)
                     ));
 
@@ -221,14 +241,16 @@ impl Daemon {
         // Serve other peers forever.
         loop {
             connection.incoming(100).next();
-            let emit_account_changed = daemon.lock().unwrap().emit_account_changed.load(Ordering::SeqCst);
-            if emit_account_changed {
-                let signal = account_changed.clone().unwrap();
+            let emit_incoming_trust_request = daemon.lock().unwrap().emit_incoming_trust_request.load(Ordering::SeqCst);
+            if emit_incoming_trust_request {
+                let storage = daemon.lock().unwrap().storage.clone();
+                storage.lock().unwrap().request_accepted = Vec::new();
+                let signal = incoming_trust_request.clone().unwrap();
                 let path = configuration_path.to_string().into();
                 let iface = configuration_iface.to_string().into();
-                let msg = signal.msg(&path, &iface);
+                let msg = signal.msg(&path, &iface).append("GLaDOs_id").append("Eve").append("").append(0);
                 let _ = connection.send(msg).map_err(|_| "Sending DBus signal failed");
-                daemon.lock().unwrap().emit_account_changed.store(false, Ordering::SeqCst);
+                daemon.lock().unwrap().emit_incoming_trust_request.store(false, Ordering::SeqCst);
             }
 
             let stop = daemon.lock().unwrap().stop.load(Ordering::SeqCst);
@@ -242,8 +264,8 @@ impl Daemon {
      * emit accountsChanged()
      * @param self
      */
-    pub fn emit_account_changed(&mut self) {
-        self.emit_account_changed.store(true, Ordering::SeqCst);
+    pub fn emit_incoming_trust_request(&mut self) {
+        self.emit_incoming_trust_request.store(true, Ordering::SeqCst);
     }
 
     /**

@@ -86,13 +86,11 @@ impl Manager {
         let dbus_listener = Connection::get_private(BusType::Session).unwrap();
         dbus_listener.add_match("interface=cx.ring.Ring.ConfigurationManager,member=incomingAccountMessage").unwrap();
         dbus_listener.add_match("interface=cx.ring.Ring.ConfigurationManager,member=incomingTrustRequest").unwrap();
-        dbus_listener.add_match("interface=cx.ring.Ring.ConfigurationManager,member=accountsChanged").unwrap();
-        dbus_listener.add_match("interface=cx.ring.Ring.ConfigurationManager,member=registrationStateChanged").unwrap();
+        dbus_listener.add_match("interface=cx.ring.Ring.ConfigurationManager,member=accountsChanged").unwrap(); // TODO
+        dbus_listener.add_match("interface=cx.ring.Ring.ConfigurationManager,member=registrationStateChanged").unwrap(); // TODO
         // For each signals, call handlers.
         for i in dbus_listener.iter(100) {
             let mut m = manager.lock().unwrap();
-            m.handle_accounts_signals(&i);
-            m.handle_registration_changed(&i);
             if let Some((account_id, interaction)) = m.handle_interactions(&i) {
                 if account_id == m.server.account.id {
                     info!("New interaction for {}: {}", account_id, interaction);
@@ -315,20 +313,6 @@ impl Manager {
     }
 
     /**
-     * Update current RORI account by handling accountsChanged signals from daemon.
-     * @param self
-     * @param ci
-     */
-    fn handle_accounts_signals(&mut self, ci: &ConnectionItem) {
-        // Check signal
-        let msg = if let &ConnectionItem::Signal(ref signal) = ci { signal } else { return };
-        if &*msg.interface().unwrap() != "cx.ring.Ring.ConfigurationManager" { return };
-        if &*msg.member().unwrap() != "accountsChanged" { return };
-        // TODO test if RORI accounts is still exists
-        println!("ACCOUNTS CHANGED");
-    }
-
-    /**
     * Handle new interactions signals
     * @param self
     * @param ci
@@ -359,20 +343,6 @@ impl Manager {
             time: time::now()
         };
         Some((account_id.unwrap().to_string(), interaction))
-    }
-
-    /**
-     * Update current RORI account by handling accountsChanged signals from daemon
-     * @param self
-     * @param ci
-     */
-    fn handle_registration_changed(&self, ci: &ConnectionItem) {
-        // Check signal
-        let msg = if let &ConnectionItem::Signal(ref signal) = ci { signal } else { return };
-        if &*msg.interface().unwrap() != "cx.ring.Ring.ConfigurationManager" { return };
-        if &*msg.member().unwrap() != "registrationStateChanged" { return };
-        // let (account_id, registration_state, _, _) = msg.get4::<&str, &str, u64, &str>();
-        // TODO the account can be disabled. Inform UI
     }
 
     /**
