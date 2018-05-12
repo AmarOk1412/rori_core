@@ -62,6 +62,11 @@ print('add alarm module')
 arguments = '("alarm", 2, 1, "text", "(wake|veille).{0,100}(in|at|dans|à|a).([0-9]+)(:|h|.*)([0-9]*)", "talk/alarm")'
 c.execute('INSERT INTO modules (name, priority, enabled, type, condition, path) VALUES' + arguments)
 
+# talk/uptime
+print('add uptime module')
+arguments = '("uptime", 2, 1, "text", "uptime|since.when.{0,20}up", "talk/uptime")'
+c.execute('INSERT INTO modules (name, priority, enabled, type, condition, path) VALUES' + arguments)
+
 # command/blackscreen
 print('add blackscreen module')
 arguments = '("blackscreen", 2, 1, "text", "^((é|e)cran.noir|black.?screen|(go to | ?)sleep|(vas | ?)dor(s|t|mir))", "command/blackscreen")'
