@@ -248,7 +248,8 @@ impl Daemon {
                 let signal = incoming_trust_request.clone().unwrap();
                 let path = configuration_path.to_string().into();
                 let iface = configuration_iface.to_string().into();
-                let msg = signal.msg(&path, &iface).append("GLaDOs_id").append("Eve").append("").append(0);
+                let dict = Dict::new(vec![("", "")]);
+                let msg = signal.msg(&path, &iface).append2("GLaDOs_id", "Eve").append2(dict, 0);
                 let _ = connection.send(msg).map_err(|_| "Sending DBus signal failed");
                 daemon.lock().unwrap().emit_incoming_trust_request.store(false, Ordering::SeqCst);
             }
