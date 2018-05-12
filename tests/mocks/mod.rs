@@ -39,6 +39,7 @@ pub struct Daemon {
     pub initialized: Arc<AtomicBool>,
     pub storage: Arc<Mutex<Storage>>,
     emit_incoming_trust_request: Arc<AtomicBool>,
+    emit_incoming_account_message: Vec<(String, String)>,
 }
 
 impl Daemon {
@@ -64,6 +65,7 @@ impl Daemon {
                 request_accepted: Vec::new(),
             })),
             emit_incoming_trust_request: Arc::new(AtomicBool::new(false)),
+            emit_incoming_account_message: Vec::new(),
         }
     }
 
@@ -86,7 +88,15 @@ impl Daemon {
              .arg(("payload", "ay"))
              .arg(("receiveTime", "t"))
         ));
-        let signal = incoming_trust_request.clone().unwrap();
+        let signal_incoming_trust_request = incoming_trust_request.clone().unwrap();
+
+        let incoming_account_message = Some(Arc::new(
+            f.signal("incomingAccountMessage", ())
+             .arg(("accountID", "s"))
+             .arg(("from", "s"))
+             .arg(("payload", "ay"))
+        ));
+        let signal_incoming_account_message = incoming_account_message.clone().unwrap();
         let storage = daemon.lock().unwrap().storage.clone();
 
         let add_contact = f.method("addContact", (), move |m| {
@@ -227,7 +237,8 @@ impl Daemon {
                          .add_m(get_contacts)
                          .add_m(send_register)
                          .add_m(accept_trust_request)
-                         .add_s(signal)
+                         .add_s(signal_incoming_trust_request)
+                         .add_s(signal_incoming_account_message)
                     ));
 
         // We register all object paths in the tree.
@@ -242,6 +253,7 @@ impl Daemon {
         loop {
             connection.incoming(100).next();
             let emit_incoming_trust_request = daemon.lock().unwrap().emit_incoming_trust_request.load(Ordering::SeqCst);
+            let emit_incoming_account_message = daemon.lock().unwrap().emit_incoming_account_message.clone();
             if emit_incoming_trust_request {
                 let storage = daemon.lock().unwrap().storage.clone();
                 storage.lock().unwrap().request_accepted = Vec::new();
@@ -253,6 +265,17 @@ impl Daemon {
                 let _ = connection.send(msg).map_err(|_| "Sending DBus signal failed");
                 daemon.lock().unwrap().emit_incoming_trust_request.store(false, Ordering::SeqCst);
             }
+            if emit_incoming_account_message.len() > 0 {
+                let signal = incoming_account_message.clone().unwrap();
+                let path = configuration_path.to_string().into();
+                let iface = configuration_iface.to_string().into();
+                let content = emit_incoming_account_message.first().unwrap();
+                let (datatype, body) = (content.0.clone(), content.1.clone());
+                let dict = Dict::new(vec![(&*datatype, &*body)]);
+                let msg = signal.msg(&path, &iface).append3("GLaDOs_id", "Eve", dict);
+                let _ = connection.send(msg).map_err(|_| "Sending DBus signal failed");
+                daemon.lock().unwrap().emit_incoming_account_message = Vec::new();
+            }
 
             let stop = daemon.lock().unwrap().stop.load(Ordering::SeqCst);
             if stop {
@@ -262,11 +285,23 @@ impl Daemon {
     }
 
     /**
-     * emit accountsChanged()
+     * emit incomingTrustRequest()
      * @param self
      */
+    #[allow(dead_code)]
     pub fn emit_incoming_trust_request(&mut self) {
         self.emit_incoming_trust_request.store(true, Ordering::SeqCst);
+    }
+
+    /**
+     * emit incomingAccountMessage()
+     * @param self
+     * @param datatype
+     * @param body
+     */
+    #[allow(dead_code)]
+    pub fn emit_incoming_account_message(&mut self, datatype: &String, body: &String) {
+        self.emit_incoming_account_message.push((datatype.clone(), body.clone()));
     }
 
     /**

@@ -176,19 +176,10 @@ impl Manager {
         let method = if accept {"acceptTrustRequest"} else {"discardTrustRequest"};
         let dbus_msg = Message::new_method_call(self.ring_dbus, self.configuration_path,
                                                 self.configuration_iface,
-                                                method);
-        if !dbus_msg.is_ok() {
-            error!("method call fails. Please verify daemon's API.");
-            return false;
-        }
-        let conn = Connection::get_private(BusType::Session);
-        if !conn.is_ok() {
-            error!("connection not ok.");
-            return false;
-        }
-        let dbus = conn.unwrap();
+                                                method).ok().expect("method call fails. Please verify daemon's API.");;
+        let dbus = Connection::get_private(BusType::Session).ok().expect("connection not ok.");
         let response = dbus.send_with_reply_and_block(
-            dbus_msg.unwrap().append3(account_id, from, accept), 2000).unwrap();
+            dbus_msg.append3(account_id, from, accept), 2000).unwrap();
         match response.get1() {
             Some(result) => {
                 info!("{} handles request from {} with success", account_id, from);
@@ -209,19 +200,10 @@ impl Manager {
     fn build_account(id: &str) -> Account {
         let dbus_msg = Message::new_method_call("cx.ring.Ring", "/cx/ring/Ring/ConfigurationManager",
                                                 "cx.ring.Ring.ConfigurationManager",
-                                                "getAccountDetails");
-        if !dbus_msg.is_ok() {
-            error!("getAccountDetails fails. Please verify daemon's API.");
-            return Account::null();
-        }
-        let conn = Connection::get_private(BusType::Session);
-        if !conn.is_ok() {
-            error!("connection not ok.");
-            return Account::null();
-        }
-        let dbus = conn.unwrap();
+                                                "getAccountDetails").ok().expect("method call fails. Please verify daemon's API.");;
+        let dbus = Connection::get_private(BusType::Session).ok().expect("connection not ok.");
         let response = dbus.send_with_reply_and_block(
-                                           dbus_msg.unwrap().append1(id), 2000
+                                           dbus_msg.append1(id), 2000
                                        ).ok().expect("Is the ring-daemon launched?");
         let details: Dict<&str, &str, _> = match response.get1() {
             Some(details) => details,
@@ -257,18 +239,10 @@ impl Manager {
     pub fn enable_account(&self) {
         let dbus_msg = Message::new_method_call(self.ring_dbus, self.configuration_path,
                                                 self.configuration_iface,
-                                                "sendRegister");
-        if !dbus_msg.is_ok() {
-            error!("sendRegister call fails. Please verify daemon's API.");
-            return;
-        }
-        let conn = Connection::get_private(BusType::Session);
-        if !conn.is_ok() {
-            return;
-        }
-        let dbus = conn.unwrap();
+                                                "sendRegister").ok().expect("method call fails. Please verify daemon's API.");;
+        let dbus = Connection::get_private(BusType::Session).ok().expect("connection not ok.");
         let _ = dbus.send_with_reply_and_block(
-            dbus_msg.unwrap().append2(self.server.account.id.clone(), true), 2000);
+            dbus_msg.append2(self.server.account.id.clone(), true), 2000);
     }
 
     /**
@@ -281,17 +255,9 @@ impl Manager {
         let mut devices: Vec<String> = Vec::new();
         let dbus_msg = Message::new_method_call(self.ring_dbus, self.configuration_path,
                                                 self.configuration_iface,
-                                                "getContacts");
-        if !dbus_msg.is_ok() {
-            error!("getContacts fails. Please verify daemon's API.");
-            return devices;
-        }
-        let conn = Connection::get_private(BusType::Session);
-        if !conn.is_ok() {
-            return Vec::new();
-        }
-        let dbus = conn.unwrap();
-        let response = dbus.send_with_reply_and_block(dbus_msg.unwrap().append1(account_id), 2000).unwrap();
+                                                "getContacts").ok().expect("method call fails. Please verify daemon's API.");;
+        let dbus = Connection::get_private(BusType::Session).ok().expect("connection not ok.");
+        let response = dbus.send_with_reply_and_block(dbus_msg.append1(account_id), 2000).unwrap();
         let devices_vec: Array<Dict<&str, &str, _>, _> = match response.get1() {
             Some(details) => details,
             None => {
@@ -379,12 +345,8 @@ impl Manager {
                 None => {
                     info!("{} found in db but not from daemon, update db.", device.0);
                     db_devices.remove(idx);
-                    match Database::remove_device(&device.0) {
-                        Ok(_) => {}
-                        _ => {
-                            error!("Failed to remove {} from database", device.0);
-                        }
-                    }
+                    let error_msg = format!("Failed to remove {} from database", device.0);
+                    Database::remove_device(&device.0).ok().expect(&*error_msg);
                 }
             }
         }
@@ -396,12 +358,8 @@ impl Manager {
                 None => {
                     info!("{} found from daemon but not in daemon, update db.", device);
                     db_devices.push((device.clone(), String::new(), String::new()));
-                    match Database::insert_new_device(&device, &String::new(), &String::new()) {
-                        Ok(_) => {}
-                        _ => {
-                            error!("Failed to insert {} from database", device);
-                        }
-                    }
+                    let error_msg = format!("Failed to insert {} from database", device);
+                    Database::insert_new_device(&device, &String::new(), &String::new()).ok().expect(&*error_msg);
                 }
             }
         }

@@ -76,7 +76,6 @@ mod tests_manager {
         teardown();
     }
 
-
     #[test]
     // Scenario
     // 1. Ensures that a manager correctly handle signal incomingTrustRequest
@@ -128,14 +127,81 @@ mod tests_manager {
 
         // A new anonymous user (Eve) should be present
         assert!(shared_manager.lock().unwrap().server.anonymous_user.devices.len() == base_size + 1);
-        let mut weasley_found = false;
+        let mut eve_found = false;
         for device in shared_manager.lock().unwrap().server.anonymous_user.devices.clone() {
             if device.ring_id == "Eve" {
-                weasley_found = true;
+                eve_found = true;
                 break;
             }
         }
-        assert!(weasley_found);
+        assert!(eve_found);
+
+        stop.store(true, Ordering::SeqCst);
+        let _ = test.join();
+        daemon.lock().unwrap().stop();
+        let _ = daemon_thread.join();
+        teardown();
+    }
+
+    #[test]
+    // Scenario
+    // 1. Ensures that a manager correctly handle signal incomingAccountMessage
+    fn manager_handle_signal_incoming_account_message() {
+        setup();
+        let daemon = Arc::new(Mutex::new(Daemon::new()));
+        let cloned_daemon = daemon.clone();
+        let daemon_thread = thread::spawn(move|| {
+            Daemon::run(cloned_daemon);
+        });
+        let one_sec = Duration::from_millis(1000);
+        thread::sleep(one_sec);
+
+        let shared_manager : Arc<Mutex<Manager>> = Arc::new(Mutex::new(
+            Manager::init("GLaDOs_id")
+            .ok().expect("Can't initialize ConfigurationManager"))
+        );
+        let shared_manager_cloned = shared_manager.clone();
+        let stop = Arc::new(AtomicBool::new(false));
+        let stop_cloned = stop.clone();
+        let test = thread::spawn(move || {
+            Manager::handle_signals(shared_manager_cloned, stop_cloned);
+        });
+
+        let two_sec = Duration::from_millis(5000);
+        thread::sleep(two_sec);
+        daemon.lock().unwrap().emit_incoming_account_message(&String::from("plain/text"), &String::from("Allo, I'm Eve!"));
+
+        // Contact should be added daemon side
+        let base_size = shared_manager.lock().unwrap().server.anonymous_user.devices.len();
+        let mut idx_signal = 0;
+        let hundred_millis = Duration::from_millis(100);
+        while idx_signal < 100 {
+            let storage = daemon.lock().unwrap().storage.clone();
+            let accepted = storage.lock().unwrap().request_accepted.clone();
+            let mut stop = false;
+            for acc in accepted {
+                if acc == "Eve" {
+                    stop = true;
+                    break;
+                }
+            }
+            if stop {
+                break;
+            }
+            thread::sleep(hundred_millis);
+            idx_signal += 1;
+        }
+
+        // A new anonymous user (Eve) should be present
+        assert!(shared_manager.lock().unwrap().server.anonymous_user.devices.len() == base_size + 1);
+        let mut eve_found = false;
+        for device in shared_manager.lock().unwrap().server.anonymous_user.devices.clone() {
+            if device.ring_id == "Eve" {
+                eve_found = true;
+                break;
+            }
+        }
+        assert!(eve_found);
 
         stop.store(true, Ordering::SeqCst);
         let _ = test.join();
