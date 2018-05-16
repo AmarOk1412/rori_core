@@ -180,16 +180,9 @@ impl Manager {
         let dbus = Connection::get_private(BusType::Session).ok().expect("connection not ok.");
         let response = dbus.send_with_reply_and_block(
             dbus_msg.append3(account_id, from, accept), 2000).unwrap();
-        match response.get1() {
-            Some(result) => {
-                info!("{} handles request from {} with success", account_id, from);
-                return result;
-            },
-            None => {
-                warn!("{} handles request from {} with failure", account_id, from);
-                return false;
-            }
-        };
+        let result = response.get1().unwrap_or(false);
+        info!("{} handles request from {} with success: {}", account_id, from, result);
+        return result;
     }
 
     /**
@@ -205,12 +198,7 @@ impl Manager {
         let response = dbus.send_with_reply_and_block(
                                            dbus_msg.append1(id), 2000
                                        ).ok().expect("Is the ring-daemon launched?");
-        let details: Dict<&str, &str, _> = match response.get1() {
-            Some(details) => details,
-            None => {
-                return Account::null();
-            }
-        };
+        let details: Dict<&str, &str, _> = response.get1().unwrap();
 
         let mut account = Account::null();
         account.id = id.to_owned();
@@ -258,12 +246,7 @@ impl Manager {
                                                 "getContacts").ok().expect("method call fails. Please verify daemon's API.");;
         let dbus = Connection::get_private(BusType::Session).ok().expect("connection not ok.");
         let response = dbus.send_with_reply_and_block(dbus_msg.append1(account_id), 2000).unwrap();
-        let devices_vec: Array<Dict<&str, &str, _>, _> = match response.get1() {
-            Some(details) => details,
-            None => {
-                return devices;
-            }
-        };
+        let devices_vec: Array<Dict<&str, &str, _>, _> = response.get1().unwrap();
         for details in devices_vec {
             for detail in details {
                 match detail {

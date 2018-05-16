@@ -18,6 +18,8 @@ mod tests_manager {
     fn setup() {
         let _ = fs::remove_file("rori.db");
         Database::init_db(); // assert this function is correct.
+        let _ = Database::insert_new_device(&String::from("Atlas"), &String::new(), &String::new());
+        let _ = Database::insert_new_device(&String::from("Heisenberg"), &String::new(), &String::new());
     }
 
     fn teardown() {

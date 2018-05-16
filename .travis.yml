@@ -9,10 +9,10 @@ before_install:
   - sed -i 's/git@github.com:/https:\/\/github.com\//' .gitmodules
   - git submodule update --init --recursive
 install:
-  - sudo apt-get install -y libdbus-1-dev openssl
+  - sudo apt-get install -f -y libdbus-1-dev openssl
   - |
     # tarpaulin deps
-    if [[ "$TRAVIS_RUST_VERSION" == nightly-2018-03-18 ]]; then
+    if [[ "$TRAVIS_RUST_VERSION" == stable ]]; then
       sudo apt-get update -y && sudo apt-get -y install libssl-dev pkg-config cmake zlib1g-dev;
       cargo install cargo-tarpaulin;
     fi
@@ -27,6 +27,6 @@ script:
   - RUST_TEST_THREADS=1 cargo test -- --nocapture
   - |
     # tarpaulin deps
-    if [[ "$TRAVIS_RUST_VERSION" == nightly-2018-03-18 ]]; then
+    if [[ "$TRAVIS_RUST_VERSION" == stable ]]; then
       cargo tarpaulin --ciserver travis-ci --coveralls $TRAVIS_JOB_ID;
     fi
