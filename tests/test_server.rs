@@ -800,7 +800,7 @@ mod tests_server {
     #[test]
     // Scenario
     // 1. A User revoke one of its another device
-    // 1. A User try to revoke the device of someone else
+    // 2. A User try to revoke the device of someone else
     fn server_remove_other_device() {
         let daemon = Arc::new(Mutex::new(Daemon::new()));
         let cloned_daemon = daemon.clone();
@@ -841,6 +841,71 @@ mod tests_server {
         assert!(server.anonymous_user.devices.first().unwrap().ring_id == "Tars_id1");
         assert!(server.registered_users.len() == 2);
         assert!(server.registered_users.last().unwrap().devices.first().unwrap().ring_id == "Tars_id2");
+
+        teardown();
+        daemon.lock().unwrap().stop();
+        let _ = daemon_thread.join();
+    }
+
+    #[test]
+    // Scenario
+    // 1. A User try to revoke the device of nobody
+    fn server_remove_invalid_device() {
+        let daemon = Arc::new(Mutex::new(Daemon::new()));
+        let cloned_daemon = daemon.clone();
+        let daemon_thread = thread::spawn(move|| {
+            Daemon::run(cloned_daemon);
+        });
+        let mut atlas = User::new();
+        atlas.name = String::from("Atlas");
+        let mut atlas_device = Device::new(&String::from("Atlas_id1"));
+        atlas_device.name = String::from("Device");
+        atlas.devices.push(atlas_device);
+        let mut atlas_device = Device::new(&String::from("Atlas_id2"));
+        atlas_device.name = String::from("Device2");
+        atlas.devices.push(atlas_device);
+        let mut tars = User::new();
+        tars.name = String::from("Tars");
+        let mut tars_device = Device::new(&String::from("Tars_id1"));
+        tars_device.name = String::from("Device");
+        tars.devices.push(tars_device);
+        let mut tars_device = Device::new(&String::from("Tars_id2"));
+        tars_device.name = String::from("Device2");
+        tars.devices.push(tars_device);
+        let mut users = Vec::new();
+        users.push(atlas);
+        users.push(tars);
+        let mut server = setup(User::new(), users);
+        assert!(server.anonymous_user.devices.len() == 0);
+
+        // Atlas_id1 do a /rm_device Atlas_id2 (should succeed)
+        server.handle_interaction(Interaction {
+            author_ring_id: String::from("Tars_id2"),
+            body: String::from("/rm_device randomId"),
+            datatype: String::from("rori/command"),
+            time: time::now()
+        });
+
+        assert!(server.registered_users.len() == 2);
+        assert!(server.registered_users.last().unwrap().devices.len() == 2);
+
+        // This should has sent 1 messages
+        let mut idx_signal = 0;
+        let hundred_millis = Duration::from_millis(100);
+        while idx_signal < 10 {
+            let storage = daemon.lock().unwrap().storage.clone();
+            let has_new_info = storage.lock().unwrap().new_info.load(Ordering::SeqCst);
+            if has_new_info {
+                let interactions = storage.lock().unwrap().interactions_sent.clone();
+                assert!(interactions.len() == 1);
+                break;
+            }
+            thread::sleep(hundred_millis);
+            idx_signal += 1;
+            if idx_signal == 10 {
+                panic!("interactions not set!");
+            }
+        }
 
         teardown();
         daemon.lock().unwrap().stop();
@@ -1046,15 +1111,22 @@ mod tests_server {
         let daemon_thread = thread::spawn(move|| {
             Daemon::run(cloned_daemon);
         });
+        let mut eve = User::new();
+        eve.name = String::from("Eve");
+        eve.devices.push(Device::new(&String::from("Eve_id1")));
         let mut atlas = User::new();
         atlas.name = String::from("Atlas");
         atlas.devices.push(Device::new(&String::from("Atlas_id1")));
         atlas.devices.push(Device::new(&String::from("Atlas_id2")));
+        let mut weasley = User::new();
+        weasley.name = String::from("Weasley");
+        weasley.devices.push(Device::new(&String::from("Weasley_id1")));
         let mut users = Vec::new();
+        users.push(eve);
         users.push(atlas);
+        users.push(weasley);
         let mut server = setup(User::new(), users);
-        assert!(server.registered_users.len() == 1);
-        assert!(server.registered_users.first().unwrap().devices.len() == 2);
+        assert!(server.registered_users.len() == 3);
 
         // Atlas_id1 unregister user.
         server.handle_interaction(Interaction {
@@ -1064,7 +1136,7 @@ mod tests_server {
             time: time::now()
         });
         assert!(server.anonymous_user.devices.len() == 2);
-        assert!(server.registered_users.len() == 0);
+        assert!(server.registered_users.len() == 2);
 
         // This should has sent 1 message
         let mut idx_signal = 0;
@@ -1083,6 +1155,56 @@ mod tests_server {
                 panic!("interactions not set!");
             }
         }
+        teardown();
+        daemon.lock().unwrap().stop();
+        let _ = daemon_thread.join();
+    }
+
+    #[test]
+    // Scenario
+    // 1. A user unregister himself but no name found
+    fn server_unregister_anonymous() {
+        let daemon = Arc::new(Mutex::new(Daemon::new()));
+        let cloned_daemon = daemon.clone();
+        let daemon_thread = thread::spawn(move|| {
+            Daemon::run(cloned_daemon);
+        });
+        let mut anonymous = User::new();
+        anonymous.name = String::new();
+        anonymous.devices.push(Device::new(&String::from("Atlas_id1")));
+        anonymous.devices.push(Device::new(&String::from("Atlas_id2")));
+        let users = Vec::new();
+        let mut server = setup(anonymous, users);
+        assert!(server.anonymous_user.devices.len() == 2);
+        assert!(server.registered_users.len() == 0);
+
+        // Atlas_id1 unregister user.
+        server.handle_interaction(Interaction {
+            author_ring_id: String::from("Atlas_id1"),
+            body: String::from("/unregister"),
+            datatype: String::from("rori/command"),
+            time: time::now()
+        });
+        // Should change nothing
+        assert!(server.anonymous_user.devices.len() == 2);
+        assert!(server.registered_users.len() == 0);
+
+        // This should has sent 1 message
+        let mut idx_signal = 0;
+        let hundred_millis = Duration::from_millis(100);
+        while idx_signal < 10 {
+            let storage = daemon.lock().unwrap().storage.clone();
+            let has_new_info = storage.lock().unwrap().new_info.load(Ordering::SeqCst);
+            if has_new_info {
+                break;
+            }
+            thread::sleep(hundred_millis);
+            idx_signal += 1;
+            if idx_signal == 10 {
+                break;
+            }
+        }
+        assert!(idx_signal == 10);
         teardown();
         daemon.lock().unwrap().stop();
         let _ = daemon_thread.join();

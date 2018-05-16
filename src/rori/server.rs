@@ -595,17 +595,9 @@ impl Server {
         let payloads = Dict::new(payloads.iter());
 
         let dbus_msg = Message::new_method_call(self.ring_dbus, self.configuration_path, self.configuration_iface,
-                                                "sendTextMessage");
-        if !dbus_msg.is_ok() {
-            error!("sendTextMessage fails. Please verify daemon's API.");
-            return 0;
-        }
-        let conn = Connection::get_private(BusType::Session);
-        if !conn.is_ok() {
-            return 0;
-        }
-        let dbus = conn.unwrap();
-        let response = dbus.send_with_reply_and_block(dbus_msg.unwrap().append3(from, destination, payloads), 2000).unwrap();
+                                                "sendTextMessage").ok().expect("sendTextMessage fails. Please verify daemon's API.");
+        let dbus = Connection::get_private(BusType::Session).ok().expect("connection failed");
+        let response = dbus.send_with_reply_and_block(dbus_msg.append3(from, destination, payloads), 2000).unwrap();
         // sendTextMessage returns one argument, which is a u64.
         let interaction_id: u64  = match response.get1() {
             Some(interaction_id) => interaction_id,
