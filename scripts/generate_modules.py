@@ -87,6 +87,11 @@ print('add lock module')
 arguments = '("lock", 2, 1, "text", "(ver(r| ?)ouil(l| ?)(e (l.ordi|le pc|l\'(é|e)cran|toi)|age)|bloque.toi)|^lock", "command/lock")'
 c.execute('INSERT INTO modules (name, priority, enabled, type, condition, path) VALUES' + arguments)
 
+# command/meteo
+print('add meteo module')
+arguments = '("meteo", 2, 1, "text", "(weather|meteo).{1,30}in.", "command/meteo")'
+c.execute('INSERT INTO modules (name, priority, enabled, type, condition, path) VALUES' + arguments)
+
 # music/music_start
 print('add music_start module')
 arguments = '("music_start", 1, 1, "text", "^(musi(c|que) ?!?)|((play|lance|joue).{1,30}(musi(c|que) ?!?))$", "music/start")'
