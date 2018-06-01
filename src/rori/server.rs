@@ -31,8 +31,38 @@ use rori::account::Account;
 use rori::database::Database;
 use rori::interaction::Interaction;
 use rori::modulemanager::ModuleManager;
+use rori::module::Module;
 use rori::user::{Device, User};
 use std::collections::HashMap;
+
+/**
+ * Internal Modules
+ */
+ pub struct RegisterModule { }
+
+/**
+ * Register an anonymous user. NOTE: add this module only if user is anonymous
+ */
+ impl Module for RegisterModule {
+     fn condition_fulfilled_by(&self, interaction: &Interaction) -> bool {
+         return interaction.datatype == "rori/command" && interaction.body.starts_with("/register");
+     }
+
+     fn exec(&self, interaction: &Interaction) -> bool {
+         let split: Vec<&str> = interaction.body.split(' ').collect();
+         if split.len() < 2 {
+             warn!("register received, but no username detected");
+             return false;
+         }
+         println!("REGISTER RECEIVED");
+         // TODO register!!!
+         false
+     }
+
+     fn get_name(&self) -> String {
+         String::from("Register")
+     }
+ }
 
 /**
  * Core class.
@@ -49,6 +79,7 @@ pub struct Server {
     configuration_iface: &'static str,
     id_to_account_linker: Vec<(String, String, bool)>
 }
+
 
 impl Server {
     /**
@@ -145,9 +176,12 @@ impl Server {
             self.add_new_anonymous_device(&interaction.author_ring_id);
         }
 
+        let mut internal_modules: Vec<Box<Module>> = Vec::new();
+
         // TODO should be handle by a module
         if interaction.datatype == "rori/command" {
             if username.len() == 0 {
+                internal_modules.push(Box::new(RegisterModule {}));
                 // Anonymous to user
                 if interaction.body.starts_with("/register") {
                     let split: Vec<&str> = interaction.body.split(' ').collect();
@@ -213,11 +247,9 @@ impl Server {
                 self.try_link_new_device(&interaction.author_ring_id,
                                          &String::from(*split.get(1).unwrap()));
             }
-
         }
 
-
-        let mm = ModuleManager::new(interaction);
+        let mm = ModuleManager::new(interaction, internal_modules);
         mm.process();
     }
 

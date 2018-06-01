@@ -67,9 +67,36 @@ impl TextCondition {
 }
 
 /**
+ * Condition's trait to implement
+ */
+pub trait Module : Send + Sync {
+    /**
+     * Is the module's condition fulfilled
+     * @param self
+     * @param interaction
+     * @return if the module's condition fulfilled
+     */
+    fn condition_fulfilled_by(&self, interaction: &Interaction) -> bool;
+
+    /**
+     * Execute the module and get if we should continue to process other modules
+     * @param self
+     * @param interaction which has trigerred this module
+     * @return if we continue to process the interaction
+     */
+    fn exec(&self, interaction: &Interaction) -> bool;
+
+    /**
+     * Get the name of the module
+     * @param self
+     */
+    fn get_name(&self) -> String;
+}
+
+/**
  * Represents a Module
  */
-pub struct Module {
+pub struct PythonModule {
     pub condition: Box<Condition>,
     pub name: String,
     pub path: String,
@@ -77,14 +104,12 @@ pub struct Module {
     pub enabled: bool,
 }
 
-impl Module {
-    /**
-     * Execute the module and get if we should continue to process other modules
-     * @param self
-     * @param interaction which has trigerred this module
-     * @return if we continue to process the interaction
-     */
-    pub fn exec(&self, interaction: &Interaction) -> bool {
+impl Module for PythonModule {
+    fn condition_fulfilled_by(&self, interaction: &Interaction) -> bool {
+        self.condition.is_fulfilled_by(interaction)
+    }
+
+    fn exec(&self, interaction: &Interaction) -> bool {
         // Init python module
         let py = Python::acquire_gil();
         let py = py.python();
@@ -100,5 +125,9 @@ impl Module {
         let continue_processing: bool = load_module.call(py, "exec_module",
             (self.path.clone(), interaction), None).unwrap().extract(py).unwrap();
         continue_processing
+    }
+
+    fn get_name(&self) -> String {
+        self.name.clone()
     }
 }

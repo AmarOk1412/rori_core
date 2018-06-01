@@ -25,6 +25,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  **/
 use rori::database::Database;
+use rori::module::Module;
 use rori::interaction::Interaction;
 use std::sync::{Arc, Mutex};
 use std::thread;
@@ -34,16 +35,19 @@ use std::thread;
  */
 pub struct ModuleManager {
     pub interaction: Interaction,
+    pub internal_modules: Vec<Box<Module>>
 }
+
 
 impl ModuleManager {
     /**
      * Generates a new ModuleManager
      * @return ModuleManager
      */
-    pub fn new(interaction: Interaction) -> ModuleManager {
+    pub fn new(interaction: Interaction, internal_modules: Vec<Box<Module>>) -> ModuleManager {
         ModuleManager {
             interaction: interaction,
+            internal_modules: internal_modules
         }
     }
 
@@ -53,6 +57,24 @@ impl ModuleManager {
      */
     pub fn process(&self) {
         let stop = Arc::new(Mutex::new(false));
+        // This is modules used by RORI. Run before every other.
+        for module in self.internal_modules.iter() {
+            let interaction = self.interaction.clone();
+            if module.condition_fulfilled_by(&interaction) {
+                info!("{} module's condition fulfilled. Exec module", module.get_name());
+                let result = module.exec(&interaction);
+                if !result {
+                    info!("{} asks RORI to stop. Stopping at the next priority...", module.get_name());
+                    *stop.lock().unwrap() = true;
+                }
+            } else {
+                info!("{} module's condition not fulfilled.", module.get_name());
+            }
+        }
+        if *stop.lock().unwrap() {
+            info!("Stopping processing");
+            return;
+        }
         // get_descending_priorities will skip non exisiting priorities
         // will be something like [0, 1, 3, 4, 7...]
         for priority in Database::get_descending_priorities() {
@@ -64,15 +86,15 @@ impl ModuleManager {
                 let interaction = self.interaction.clone();
                 let stop_cloned = stop.clone();
                 children.push(thread::spawn(move || {
-                    if module.condition.is_fulfilled_by(&interaction) {
-                        info!("{} module's condition fulfilled. Exec module", module.name);
+                    if module.condition_fulfilled_by(&interaction) {
+                        info!("{} module's condition fulfilled. Exec module", module.get_name());
                         let result = module.exec(&interaction);
                         if !result {
-                            info!("{} asks RORI to stop. Stopping at the next priority...", module.name);
+                            info!("{} asks RORI to stop. Stopping at the next priority...", module.get_name());
                             *stop_cloned.lock().unwrap() = true;
                         }
                     } else {
-                        info!("{} module's condition not fulfilled.", module.name);
+                        info!("{} module's condition not fulfilled.", module.get_name());
                     }
                 }));
             }

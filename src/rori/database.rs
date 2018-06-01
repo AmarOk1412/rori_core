@@ -121,7 +121,7 @@ impl Database {
      * @param priority
      * @return a vector of modules
      */
-    pub fn get_enabled_modules(priority: u64) -> Vec<Module> {
+    pub fn get_enabled_modules(priority: u64) -> Vec<PythonModule> {
         let conn = rusqlite::Connection::open("rori.db").unwrap();
         let mut stmt = conn.prepare("SELECT name, condition, path \
                                      FROM modules WHERE priority=:priority AND enabled=1"
@@ -131,7 +131,7 @@ impl Database {
        while let Some(row) = rows.next() {
            let row = row.unwrap();
            modules.push(
-               Module {
+               PythonModule {
                    condition: Box::new(TextCondition::new(row.get(1))),
                    name: row.get(0),
                    path: row.get(2),
