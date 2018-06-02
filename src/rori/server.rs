@@ -360,7 +360,7 @@ impl Server {
                         let msg = format!("{} linked to {}", from_id, argument);
                         info!("{}", msg);
                         self.move_ring_to_user(&id, &account);
-                        self.send_interaction(&*id, &*from_id, &*format!("{{\"registered\":true, \"username\":\"{}\"}}", argument));
+                        self.send_interaction(&*id, &*from_id, &*format!("{{\"registered\":true, \"username\":\"{}\"}}", argument), "rori/message");
                         break;
                     }
                 }
@@ -378,7 +378,7 @@ impl Server {
                         let msg = format!("{} linked to {}", argument, from_user);
                         info!("{}", msg);
                         self.move_ring_to_user(&id, &account);
-                        self.send_interaction(&*id, &*from_id, &*format!("{{\"registered\":true, \"username\":\"{}\"}}", from_user));
+                        self.send_interaction(&*id, &*from_id, &*format!("{{\"registered\":true, \"username\":\"{}\"}}", from_user), "rori/message");
                         break;
                     }
                 }
@@ -413,15 +413,15 @@ impl Server {
         if from_user != &*mod_user {
             let err = format!("!!!!!{} trying to register device with different user ({}) ", from_id, mod_id);
             warn!("{}", err);
-            self.send_interaction(&*id, &*from_id, &*format!("{{\"registered\":false, \"username\":\"{}\", \"err\":\"bad_register error from device {}\"}}", username, from_id));
-            self.send_interaction(&*id, &*mod_id, &*format!("{{\"registered\":false, \"username\":\"{}\", \"err\":\"bad_register error from device {}\"}}", username, from_id));
+            self.send_interaction(&*id, &*from_id, &*format!("{{\"registered\":false, \"username\":\"{}\", \"err\":\"bad_register error from device {}\"}}", username, from_id), "rori/message");
+            self.send_interaction(&*id, &*mod_id, &*format!("{{\"registered\":false, \"username\":\"{}\", \"err\":\"bad_register error from device {}\"}}", username, from_id), "rori/message");
             return;
         }
         // Search if it's already registered
         if self.get_ring_id(&format!("{}_{}", username, devicename)).len() > 0 {
             let err = format!("registering {} for {} failed because devicename was found", devicename, ring_id);
             warn!("{}", err);
-            self.send_interaction(&*id, ring_id, &*format!("{{\"registered\":false, \"devicename\":\"{}\", \"err\":\"{}_{} already registered\"}}", devicename, username, devicename));
+            self.send_interaction(&*id, ring_id, &*format!("{{\"registered\":false, \"devicename\":\"{}\", \"err\":\"{}_{} already registered\"}}", devicename, username, devicename), "rori/message");
         } else {
             // register device
             Database::update_devicename(ring_id, devicename)
@@ -440,7 +440,7 @@ impl Server {
             // And inform user
             let msg = format!("{} is now known as {}_{}", ring_id, username, devicename);
             info!("{}", msg);
-            self.send_interaction(&*id, &*from_id, &*format!("{{\"registered\":true, \"devicename\":\"{}\"", devicename));
+            self.send_interaction(&*id, &*from_id, &*format!("{{\"registered\":true, \"devicename\":\"{}\"", devicename), "rori/message");
         }
     }
 
@@ -456,7 +456,7 @@ impl Server {
         if self.get_ring_id(username).len() > 0 {
             let err = format!("registering {} for {} failed because username was found", username, ring_id);
             warn!("{}", err);
-            self.send_interaction(&*id, ring_id, &*format!("{{\"registered\":false, \"username\":\"{}\", \"err\":\"{} already registered\"}}", username, username));
+            self.send_interaction(&*id, ring_id, &*format!("{{\"registered\":false, \"username\":\"{}\", \"err\":\"{} already registered\"}}", username, username), "rori/message");
         } else {
             // Register!
             Database::update_username(ring_id, username)
@@ -472,7 +472,7 @@ impl Server {
             // Inform user that they is registered.
             let msg = format!("{} is now known as {}", ring_id, username);
             info!("{}", msg);
-            self.send_interaction(&*id, ring_id, &*format!("{{\"registered\":true, \"username\":\"{}\"}}", username));
+            self.send_interaction(&*id, ring_id, &*format!("{{\"registered\":true, \"username\":\"{}\"}}", username), "rori/message");
         }
     }
 
@@ -490,8 +490,8 @@ impl Server {
         if from_user != &*mod_user {
             let err = format!("!!!!!{} trying to revoke device with different user ({}) ", from_id, mod_id);
             warn!("{}", err);
-            self.send_interaction(&*id, &*from_id, &*format!("{{\"registered\":false, \"username\":\"{}\", \"err\":\"try to remove incorrect device from {}\"}}", from_user, from_id));
-            self.send_interaction(&*id, &*mod_id, &*format!("{{\"registered\":false, \"username\":\"{}\", \"err\":\"try to remove incorrect device from {}\"}}", from_user, from_id));
+            self.send_interaction(&*id, &*from_id, &*format!("{{\"registered\":false, \"username\":\"{}\", \"err\":\"try to remove incorrect device from {}\"}}", from_user, from_id), "rori/message");
+            self.send_interaction(&*id, &*mod_id, &*format!("{{\"registered\":false, \"username\":\"{}\", \"err\":\"try to remove incorrect device from {}\"}}", from_user, from_id), "rori/message");
             return;
         }
         // Remove the device
@@ -528,9 +528,9 @@ impl Server {
         if success {
             msg = format!("{} device name revoked", ring_id);
             info!("{}", msg);
-            self.send_interaction(&*id, &*from_id, &*format!("{{\"registered\":false, \"device\":\"{}\"}}", ring_id));
+            self.send_interaction(&*id, &*from_id, &*format!("{{\"registered\":false, \"device\":\"{}\"}}", ring_id), "rori/message");
         } else {
-            self.send_interaction(&*id, &*from_id, &*format!("{{\"registered\":true, \"device\":\"{}\", \"err\":\"device not found\"}}", ring_id));
+            self.send_interaction(&*id, &*from_id, &*format!("{{\"registered\":true, \"device\":\"{}\", \"err\":\"device not found\"}}", ring_id), "rori/message");
             warn!("{}", msg);
         }
     }
@@ -572,7 +572,7 @@ impl Server {
                 }
                 let mut msg = format!("{} unregistered", registered.name);
                 info!("{}", msg);
-                self.send_interaction(&*id, ring_id, &*format!("{{\"registered\":false, \"username\":\"{}\"}}", registered.name));
+                self.send_interaction(&*id, ring_id, &*format!("{{\"registered\":false, \"username\":\"{}\"}}", registered.name), "rori/message");
                 break;
             }
             idx += 1;
@@ -582,16 +582,16 @@ impl Server {
 
     /**
      * Send a new text message
-     * TODO handle multi types
      * @param self
      * @param from the account who send this
      * @param destination ring_id of the destination
      * @param body text to send
+     * @param datatype of the message
      * @return the interaction id if success. TODO, watch message status (if received)
      */
-    fn send_interaction(&self, from: &str, destination: &str, body: &str) -> u64 {
+    fn send_interaction(&self, from: &str, destination: &str, body: &str, datatype: &str) -> u64 {
         let mut payloads: HashMap<&str, &str> = HashMap::new();
-        payloads.insert("text/plain", body);
+        payloads.insert(datatype, body);
         let payloads = Dict::new(payloads.iter());
 
         let dbus_msg = Message::new_method_call(self.ring_dbus, self.configuration_path, self.configuration_iface,
