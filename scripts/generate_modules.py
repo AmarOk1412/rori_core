@@ -102,4 +102,19 @@ print('add music_stop module')
 arguments = '("music_stop", 1, 1, "text", "^stop.{1,8}musi(c|que)", "music/stop")'
 c.execute('INSERT INTO modules (name, priority, enabled, type, condition, path) VALUES' + arguments)
 
+# music/music_pause
+print('add music_pause module')
+arguments = '("music_pause", 1, 1, "text", "^pause", "music/pause")'
+c.execute('INSERT INTO modules (name, priority, enabled, type, condition, path) VALUES' + arguments)
+
+# music/music_next
+print('add music_next module')
+arguments = '("music_next", 1, 1, "text", "^next.{1,8}musi(c|que)", "music/next")'
+c.execute('INSERT INTO modules (name, priority, enabled, type, condition, path) VALUES' + arguments)
+
+# music/music_previous
+print('add music_previous module')
+arguments = '("music_previous", 1, 1, "text", "^previous.{1,8}musi(c|que)", "music/previous")'
+c.execute('INSERT INTO modules (name, priority, enabled, type, condition, path) VALUES' + arguments)
+
 conn.commit()
