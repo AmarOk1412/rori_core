@@ -277,17 +277,27 @@ impl Manager {
         let author_ring_id = author_ring_id.unwrap().to_string();
         let mut body = String::new();
         let mut datatype = String::new();
+        let mut metadatas: HashMap<String, String> = HashMap::new();
+        let supported_types = Database::get_modules_datatypes();
         for detail in payloads.unwrap() {
             match detail {
                 (key, value) => {
-                    datatype = key.to_string();
-                    body = value.to_string();
+                    if supported_types.contains(&key.to_string()) {
+                        datatype = key.to_string();
+                        body = value.to_string();
+                    } else {
+                        metadatas.insert(
+                            key.to_string(),
+                            value.to_string()
+                        );
+                    }
                 }
             }
         };
         let interaction = Interaction {
             author_ring_id: author_ring_id,
             body: body,
+            metadatas: metadatas,
             datatype: datatype,
             time: time::now()
         };

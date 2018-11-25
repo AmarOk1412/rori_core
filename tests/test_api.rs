@@ -15,6 +15,7 @@ mod tests_api {
     use mocks::Daemon;
     use reqwest;
     use serde_json::{Value, from_str};
+    use std::collections::HashMap;
     use std::fs;
     use std::io::Read;
     use std::sync::{Arc, Mutex};
@@ -50,13 +51,15 @@ mod tests_api {
                 author_ring_id: String::from("Weasley"),
                 body: String::from("/register weasley"),
                 datatype: String::from("rori/command"),
-                time: time::now()
+                time: time::now(),
+                metadatas: HashMap::new()
             });
             m.lock().unwrap().server.handle_interaction(Interaction {
                 author_ring_id: String::from("Weasley"),
                 body: String::from("/add_device core"),
                 datatype: String::from("rori/command"),
-                time: time::now()
+                time: time::now(),
+                metadatas: HashMap::new()
             });
             let mut api = API::new(m, String::from("0.0.0.0:1412"),
                                    String::from("./test_keys/api.p12"), String::new());
@@ -139,7 +142,8 @@ mod tests_api {
                 author_ring_id: String::from("weasley_id"),
                 body: String::from("/register weasley"),
                 datatype: String::from("rori/command"),
-                time: time::now()
+                time: time::now(),
+                metadatas: HashMap::new(),
             });
             let mut api = API::new(m, String::from("0.0.0.0:1413"),
                                    String::from("./test_keys/api.p12"), String::new());

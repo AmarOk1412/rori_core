@@ -12,6 +12,7 @@ mod tests_server {
     use core::rori::server::Server;
     use core::rori::user::{Device, User};
     use mocks::Daemon;
+    use std::collections::HashMap;
     use std::fs;
     use std::sync::atomic::Ordering;
     use std::sync::{Arc, Mutex};
@@ -53,10 +54,11 @@ mod tests_server {
             author_ring_id: String::from("Tars_id"),
             body: String::from("My joke percentage is at 70%!"),
             datatype: String::from("text/plain"),
-            time: time::now()
+            time: time::now(),
+            metadatas: HashMap::new(),
         };
         let formatted_account = format!("{}", interaction);
-        assert!(formatted_account == format!("{} ({}): {}", interaction.author_ring_id, interaction.datatype, interaction.body));
+        assert!(formatted_account == format!("{} ({};{:?}): {}", interaction.author_ring_id, interaction.datatype, interaction.metadatas, interaction.body));
     }
 
     #[test]
@@ -111,7 +113,8 @@ mod tests_server {
             author_ring_id: String::from("Tars_id"),
             body: String::from("/add_types"),
             datatype: String::from("rori/command"),
-            time: time::now()
+            time: time::now(),
+            metadatas: HashMap::new(),
         });
         let dt = Database::get_datatypes(&String::from("Tars_id"));
         assert!(dt.len() == 0);
@@ -121,7 +124,8 @@ mod tests_server {
             author_ring_id: String::from("Tars_id"),
             body: String::from("/add_types music command"),
             datatype: String::from("rori/command"),
-            time: time::now()
+            time: time::now(),
+            metadatas: HashMap::new(),
         });
         let dt = Database::get_datatypes(&String::from("Tars_id"));
         assert!(dt.len() == 2);
@@ -133,7 +137,8 @@ mod tests_server {
             author_ring_id: String::from("Tars_id"),
             body: String::from("/add_types music other"),
             datatype: String::from("rori/command"),
-            time: time::now()
+            time: time::now(),
+            metadatas: HashMap::new(),
         });
         let dt = Database::get_datatypes(&String::from("Tars_id"));
         assert!(dt.len() == 3);
@@ -165,7 +170,8 @@ mod tests_server {
             author_ring_id: String::from("Tars_id"),
             body: String::from("/add_types music command other"),
             datatype: String::from("rori/command"),
-            time: time::now()
+            time: time::now(),
+            metadatas: HashMap::new(),
         });
         let dt = Database::get_datatypes(&String::from("Tars_id"));
         assert!(dt.len() == 3);
@@ -175,7 +181,8 @@ mod tests_server {
             author_ring_id: String::from("Tars_id"),
             body: String::from("/rm_types"),
             datatype: String::from("rori/command"),
-            time: time::now()
+            time: time::now(),
+            metadatas: HashMap::new(),
         });
         let dt = Database::get_datatypes(&String::from("Tars_id"));
         assert!(dt.len() == 3);
@@ -185,7 +192,8 @@ mod tests_server {
             author_ring_id: String::from("Tars_id"),
             body: String::from("/rm_types nothing"),
             datatype: String::from("rori/command"),
-            time: time::now()
+            time: time::now(),
+            metadatas: HashMap::new(),
         });
         let dt = Database::get_datatypes(&String::from("Tars_id"));
         assert!(dt.len() == 3);
@@ -195,7 +203,8 @@ mod tests_server {
             author_ring_id: String::from("Tars_id"),
             body: String::from("/rm_types nothing music command"),
             datatype: String::from("rori/command"),
-            time: time::now()
+            time: time::now(),
+            metadatas: HashMap::new(),
         });
         let dt = Database::get_datatypes(&String::from("Tars_id"));
         assert!(dt.len() == 1);
@@ -206,7 +215,8 @@ mod tests_server {
             author_ring_id: String::from("Tars_id"),
             body: String::from("/rm_types other"),
             datatype: String::from("rori/command"),
-            time: time::now()
+            time: time::now(),
+            metadatas: HashMap::new(),
         });
         let dt = Database::get_datatypes(&String::from("Tars_id"));
         assert!(dt.len() == 0);
@@ -236,7 +246,8 @@ mod tests_server {
             author_ring_id: String::from("Tars_id"),
             body: String::from("/add_types music command other"),
             datatype: String::from("rori/command"),
-            time: time::now()
+            time: time::now(),
+            metadatas: HashMap::new(),
         });
         let dt = Database::get_datatypes(&String::from("Tars_id"));
         assert!(dt.len() == 3);
@@ -246,7 +257,8 @@ mod tests_server {
             author_ring_id: String::from("Tars_id"),
             body: String::from("/set_types type1 type2"),
             datatype: String::from("rori/command"),
-            time: time::now()
+            time: time::now(),
+            metadatas: HashMap::new(),
         });
         let dt = Database::get_datatypes(&String::from("Tars_id"));
         assert!(dt.len() == 2);
@@ -258,7 +270,8 @@ mod tests_server {
             author_ring_id: String::from("Tars_id"),
             body: String::from("/set_types "),
             datatype: String::from("rori/command"),
-            time: time::now()
+            time: time::now(),
+            metadatas: HashMap::new(),
         });
         let dt = Database::get_datatypes(&String::from("Tars_id"));
         assert!(dt.len() == 0);
@@ -356,7 +369,8 @@ mod tests_server {
             author_ring_id: String::from("Tars_id"),
             body: String::from("My joke percentage is at 70%!"),
             datatype: String::from("text/plain"),
-            time: time::now()
+            time: time::now(),
+            metadatas: HashMap::new()
         });
         // Should be in anonymouses
         assert!(server.anonymous_user.devices.len() == 1);
@@ -410,14 +424,16 @@ mod tests_server {
             author_ring_id: String::from("Tars_id"),
             body: String::from("/register tars"),
             datatype: String::from("rori/command"),
-            time: time::now()
+            time: time::now(),
+            metadatas: HashMap::new()
         });
         // And bad tars try to to the same thing
         server.handle_interaction(Interaction {
             author_ring_id: String::from("Bad_Tars_id"),
             body: String::from("/register tars"),
             datatype: String::from("rori/command"),
-            time: time::now()
+            time: time::now(),
+            metadatas: HashMap::new()
         });
         // Bad_Tars_id should still be an anonymous
         assert!(server.anonymous_user.devices.len() == 1);
@@ -466,7 +482,8 @@ mod tests_server {
             author_ring_id: String::from("Tars_id"),
             body: String::from("/register"),
             datatype: String::from("rori/command"),
-            time: time::now()
+            time: time::now(),
+            metadatas: HashMap::new(),
         });
         // Bad_Tars_id should still be an anonymous
         assert!(server.anonymous_user.devices.len() == 1);
@@ -504,14 +521,16 @@ mod tests_server {
             author_ring_id: String::from("Tars_id"),
             body: String::from("/add_device android"),
             datatype: String::from("rori/command"),
-            time: time::now()
+            time: time::now(),
+            metadatas: HashMap::new(),
         });
         // Tars_id2 do a /add_device pc (should fails because of Tars_pc)
         server.handle_interaction(Interaction {
             author_ring_id: String::from("Tars_id2"),
             body: String::from("/add_device pc"),
             datatype: String::from("rori/command"),
-            time: time::now()
+            time: time::now(),
+            metadatas: HashMap::new(),
         });
         // Tars_id should now be recognized for Tars_android
         let mut confirmed = false;
@@ -581,7 +600,8 @@ mod tests_server {
             author_ring_id: String::from("Tars_pc"),
             body: String::from("/add_device pc Tars_id"),
             datatype: String::from("rori/command"),
-            time: time::now()
+            time: time::now(),
+            metadatas: HashMap::new(),
         });
         // Tars_id should now be recognized for Tars_android
         let mut confirmed = false;
@@ -641,7 +661,8 @@ mod tests_server {
             author_ring_id: String::from("Tars_id"),
             body: String::from("/add_device"),
             datatype: String::from("rori/command"),
-            time: time::now()
+            time: time::now(),
+            metadatas: HashMap::new(),
         });
         // Tars_id should now be recognized for Tars_android
         let mut confirmed = false;
@@ -691,14 +712,16 @@ mod tests_server {
             author_ring_id: String::from("Tars_id"),
             body: String::from("/add_device pc Tars_id2"),
             datatype: String::from("rori/command"),
-            time: time::now()
+            time: time::now(),
+            metadatas: HashMap::new()
         });
         // Tars_id2 do a /add_device pc2 Atlas_id (should fails)
         server.handle_interaction(Interaction {
             author_ring_id: String::from("Tars_id"),
             body: String::from("/add_device pc2 Atlas_id"),
             datatype: String::from("rori/command"),
-            time: time::now()
+            time: time::now(),
+            metadatas: HashMap::new()
         });
         // Tars_id2 should now be recognized for Tars_pc and Atlas_id as nothing
         let mut confirmed_tars = false;
@@ -756,7 +779,8 @@ mod tests_server {
             author_ring_id: String::from("Atlas_id1"),
             body: String::from("/rm_device"),
             datatype: String::from("rori/command"),
-            time: time::now()
+            time: time::now(),
+            metadatas: HashMap::new()
         });
 
         assert!(server.anonymous_user.devices.len() == 1);
@@ -769,7 +793,8 @@ mod tests_server {
             author_ring_id: String::from("Atlas_id2"),
             body: String::from("/rm_device"),
             datatype: String::from("rori/command"),
-            time: time::now()
+            time: time::now(),
+            metadatas: HashMap::new()
         });
 
         assert!(server.anonymous_user.devices.len() == 2);
@@ -834,7 +859,8 @@ mod tests_server {
             author_ring_id: String::from("Tars_id2"),
             body: String::from("/rm_device Tars_id1"),
             datatype: String::from("rori/command"),
-            time: time::now()
+            time: time::now(),
+            metadatas: HashMap::new(),
         });
 
         assert!(server.anonymous_user.devices.len() == 1);
@@ -883,7 +909,8 @@ mod tests_server {
             author_ring_id: String::from("Tars_id2"),
             body: String::from("/rm_device randomId"),
             datatype: String::from("rori/command"),
-            time: time::now()
+            time: time::now(),
+            metadatas: HashMap::new(),
         });
 
         assert!(server.registered_users.len() == 2);
@@ -944,7 +971,8 @@ mod tests_server {
             author_ring_id: String::from("Tars_pc"),
             body: String::from("/rm_device Tars_id1"),
             datatype: String::from("rori/command"),
-            time: time::now()
+            time: time::now(),
+            metadatas: HashMap::new(),
         });
         // Tars_id should now be recognized for Tars_android
         let mut confirmed = false;
@@ -1002,7 +1030,8 @@ mod tests_server {
             author_ring_id: String::from("Atlas_id1"),
             body: String::from("/register Atlas"),
             datatype: String::from("rori/command"),
-            time: time::now()
+            time: time::now(),
+            metadatas: HashMap::new(),
         });
         assert!(server.anonymous_user.devices.len() == 2);
         assert!(server.registered_users.len() == 1);
@@ -1012,7 +1041,8 @@ mod tests_server {
             author_ring_id: String::from("Atlas_id1"),
             body: String::from("/link Atlas_id2"),
             datatype: String::from("rori/command"),
-            time: time::now()
+            time: time::now(),
+            metadatas: HashMap::new(),
         });
         assert!(server.anonymous_user.devices.len() == 2);
         assert!(server.registered_users.first().unwrap().devices.len() == 1);
@@ -1021,7 +1051,8 @@ mod tests_server {
             author_ring_id: String::from("Atlas_id2"),
             body: String::from("/link Atlas"),
             datatype: String::from("rori/command"),
-            time: time::now()
+            time: time::now(),
+            metadatas: HashMap::new(),
         });
 
         assert!(server.anonymous_user.devices.len() == 1);
@@ -1033,7 +1064,8 @@ mod tests_server {
             author_ring_id: String::from("Atlas_id3"),
             body: String::from("/link Atlas"),
             datatype: String::from("rori/command"),
-            time: time::now()
+            time: time::now(),
+            metadatas: HashMap::new(),
         });
         assert!(server.anonymous_user.devices.len() == 1);
         assert!(server.registered_users.first().unwrap().devices.len() == 2);
@@ -1042,7 +1074,8 @@ mod tests_server {
             author_ring_id: String::from("Atlas_id1"),
             body: String::from("/link Atlas_id3"),
             datatype: String::from("rori/command"),
-            time: time::now()
+            time: time::now(),
+            metadatas: HashMap::new(),
         });
         assert!(server.anonymous_user.devices.len() == 0);
 
@@ -1084,7 +1117,8 @@ mod tests_server {
             author_ring_id: String::from("Atlas_id1"),
             body: String::from("/register Atlas"),
             datatype: String::from("rori/command"),
-            time: time::now()
+            time: time::now(),
+            metadatas: HashMap::new(),
         });
         assert!(server.registered_users.len() == 1);
 
@@ -1093,7 +1127,8 @@ mod tests_server {
             author_ring_id: String::from("Atlas_id1"),
             body: String::from("/link"),
             datatype: String::from("rori/command"),
-            time: time::now()
+            time: time::now(),
+            metadatas: HashMap::new(),
         });
         assert!(server.registered_users.first().unwrap().devices.len() == 1);
 
@@ -1133,7 +1168,8 @@ mod tests_server {
             author_ring_id: String::from("Atlas_id1"),
             body: String::from("/unregister"),
             datatype: String::from("rori/command"),
-            time: time::now()
+            metadatas: HashMap::new(),
+            time: time::now(),
         });
         assert!(server.anonymous_user.devices.len() == 2);
         assert!(server.registered_users.len() == 2);
@@ -1183,7 +1219,8 @@ mod tests_server {
             author_ring_id: String::from("Atlas_id1"),
             body: String::from("/unregister"),
             datatype: String::from("rori/command"),
-            time: time::now()
+            time: time::now(),
+            metadatas: HashMap::new(),
         });
         // Should change nothing
         assert!(server.anonymous_user.devices.len() == 2);

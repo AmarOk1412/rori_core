@@ -61,8 +61,7 @@ impl Database {
                 enabled     BOOLEAN,
                 type        TEXT,
                 condition   TEXT,
-                path        TEXT,
-                metadatas   TEXT
+                path        TEXT
                 )", &[]).unwrap();
             conn.execute("CREATE TABLE IF NOT EXISTS emotions (
                 username    TEXT PRIMARY KEY,
@@ -98,6 +97,24 @@ impl Database {
                     datatypes.push(String::from(dt));
                 }
             }
+        }
+        datatypes
+    }
+
+    /**
+     * Get datatypes supported for the reception to execute modules conditions
+     * @return Vec<String> where each string is a supported datatype
+     */
+    pub fn get_modules_datatypes() -> Vec<String> {
+        let mut datatypes = Vec::new();
+        datatypes.push(String::from("rori/command")); // Basic datatype handled by the core
+        let conn = rusqlite::Connection::open("rori.db").unwrap();
+        let mut stmt = conn.prepare("SELECT DISTINCT type FROM modules;").unwrap();
+        let mut rows = stmt.query(&[]).unwrap();
+        if let Some(row) = rows.next() {
+            let row = row.unwrap();
+            let row: String = row.get(0);
+            datatypes.push(String::from(row));
         }
         datatypes
     }

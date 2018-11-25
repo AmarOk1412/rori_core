@@ -19,6 +19,7 @@ mod tests_server {
     use mocks::Daemon;
     use rusqlite;
     use serde_json;
+    use std::collections::HashMap;
     use std::io::prelude::*;
     use std::fs;
     use std::fs::File;
@@ -132,7 +133,8 @@ mod tests_server {
             author_ring_id: String::from("Tars_id"),
             body: String::from("My joke percentage is at 70%!"),
             datatype: String::from("text/plain"),
-            time: time::now()
+            time: time::now(),
+            metadatas: HashMap::new()
         });
         // Let the time to the module
         let fhundred_millis = Duration::from_millis(500);
@@ -153,7 +155,8 @@ mod tests_server {
             author_ring_id: String::from("Tars_id"),
             body: String::from("My joke percentage is at 60%!"),
             datatype: String::from("text/plain"),
-            time: time::now()
+            time: time::now(),
+            metadatas: HashMap::new()
         });
         // Let the time to the module
         let fhundred_millis = Duration::from_millis(500);
@@ -189,7 +192,8 @@ mod tests_server {
             author_ring_id: String::from("Tars_id"),
             body: String::from("yo"),
             datatype: String::from("text/plain"),
-            time: time::now()
+            time: time::now(),
+            metadatas: HashMap::new()
         });
 
         // This should has sent 1 message
@@ -229,7 +233,8 @@ mod tests_server {
             author_ring_id: String::from("PBody_id"),
             body: String::from("name"),
             datatype: String::from("text/plain"),
-            time: time::now()
+            time: time::now(),
+            metadatas: HashMap::new()
         });
 
         // This should has sent 1 message (not 2!)
