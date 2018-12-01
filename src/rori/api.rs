@@ -106,6 +106,8 @@ struct NameHandler {
 struct NameResponse {
     name: String,
     addr: String,
+    full_devices: String,
+    bridges_devices: String,
 }
 
 /**
@@ -121,13 +123,31 @@ impl Handler for NameHandler {
         let content_type = "application/json".parse::<Mime>().unwrap();
         let name = request.extensions.get::<Router>().unwrap().find("name").unwrap_or("");
         info!("GET /name/{}", name);
-        // Translate nickname to a ring_id
-        let ring_id = self.manager.lock().unwrap().server.get_ring_id(&String::from(name));
+        let devices = Database::get_devices_for_username(&String::from(name));
         // Build the response
-        if ring_id.len() > 0 {
+        if devices.len() > 0 {
+            let mut is_first = true;
+            let mut addr = String::new();
+            let mut full_devices = String::new();
+            let mut bridges_devices = String::new();
+            for (_, h, _, _, ib) in devices {
+                if is_first {
+                    is_first = false;
+                    addr = format!("0x{}", h.replace("ring:", ""));
+                }
+                if ib {
+                    bridges_devices += &*h;
+                    bridges_devices += ";";
+                } else {
+                    full_devices += &*h;
+                    full_devices += ";";
+                }
+            }
             let answer = NameResponse {
                 name: String::from(name),
-                addr: format!("0x{}", ring_id.replace("ring:", "")),
+                addr: addr,
+                full_devices: full_devices,
+                bridges_devices: bridges_devices,
             };
             let response = serde_json::to_string(&answer).unwrap_or(String::new());
             return Ok(Response::with((content_type, status::Ok, response)))
@@ -176,13 +196,15 @@ impl Handler for AddrHandler {
         if devices.len() > 0 {
             let mut is_first = true;
             for (_, _, u, _, ib) in devices {
-                if is_first {
+                if is_first && u.len() > 0 {
                     is_first = false;
                     username = u.clone();
                     is_bridge = ib;
                 }
-                users_list += &*u;
-                users_list += ";";
+                if u.len() > 0 {
+                    users_list += &*u;
+                    users_list += ";";
+                }
             }
 
             let answer = AddrResponse {
