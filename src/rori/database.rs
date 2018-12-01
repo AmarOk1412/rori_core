@@ -49,10 +49,12 @@ impl Database {
         if do_migration {
             info!("migrate database to version 1");
             conn.execute("CREATE TABLE IF NOT EXISTS devices (
-                ring_id          TEXT PRIMARY KEY,
+                id               INTEGER PRIMARY KEY,
+                hash             TEXT,
                 username         TEXT,
                 devicename       TEXT,
-                additional_types TEXT
+                additional_types TEXT,
+                is_bridge        INTEGER
                 )", &[]).unwrap();
             conn.execute("CREATE TABLE IF NOT EXISTS modules (
                 id          INTEGER PRIMARY KEY,
@@ -80,14 +82,14 @@ impl Database {
     /**
      * get additional supported types for a device (text/plain is supported by default)
      * NOTE: because this is only used by rori_modules, don't have to save it on the rust side
-     * @param ring_id of the device
+     * @param id of the device
      * @return Vec<String> where each string is a supported datatype
      */
-    pub fn get_datatypes(ring_id: &String) -> Vec<String> {
+    pub fn get_datatypes(id: &i32) -> Vec<String> {
         let mut datatypes = Vec::new();
         let conn = rusqlite::Connection::open("rori.db").unwrap();
-        let mut stmt = conn.prepare("SELECT additional_types FROM devices WHERE ring_id=:ring_id").unwrap();
-        let mut rows = stmt.query_named(&[(":ring_id", ring_id)]).unwrap();
+        let mut stmt = conn.prepare("SELECT additional_types FROM devices WHERE id=:id").unwrap();
+        let mut rows = stmt.query_named(&[(":id", id)]).unwrap();
         if let Some(row) = rows.next() {
             let row = row.unwrap();
             let row: String = row.get(0);
@@ -121,16 +123,16 @@ impl Database {
 
     /**
      * Insert new device
-     * @param ring_id the ring id of this device
+     * @param hash the ring id of this device
      * @param username username linked
      * @param devicename device's name related
      * @return the line's id inserted if success, else an error
      */
-    pub fn insert_new_device(ring_id: &String, username: &String, devicename: &String) -> Result<i32, rusqlite::Error> {
+    pub fn insert_new_device(hash: &String, username: &String, devicename: &String) -> Result<i32, rusqlite::Error> {
         let conn = rusqlite::Connection::open("rori.db").unwrap();
-        let mut conn = conn.prepare("INSERT INTO devices (ring_id, username, devicename, additional_types)
-                                     VALUES (:ring_id, :username, :devicename, \"\")").unwrap();
-        conn.execute_named(&[(":ring_id", ring_id), (":username", username), (":devicename", devicename)])
+        let mut conn = conn.prepare("INSERT INTO devices (hash, username, devicename, additional_types, is_bridge)
+                                     VALUES (:hash, :username, :devicename, \"\", 0)").unwrap();
+        conn.execute_named(&[(":hash", hash), (":username", username), (":devicename", devicename)])
     }
 
     /**
@@ -162,32 +164,69 @@ impl Database {
 
     /**
      * Return one device
-     * @ring_id the ring id of the device to search
-     * @return (ring_id, username, devicename) or empty strings if ring_id not found
+     * @hash the ring id of the device to search
+     * @return (id, hash, username, devicename, is_bridge) or empty strings with id = -1 if hash not found
      */
-    pub fn get_device(ring_id: &String) -> (String, String, String) {
+    pub fn get_device(hash: &String, username: &String) -> (i32, String, String, String, i32) {
         let conn = rusqlite::Connection::open("rori.db").unwrap();
-        let mut stmt = conn.prepare("SELECT ring_id, username, devicename FROM devices WHERE ring_id=:ring_id").unwrap();
-        let mut rows = stmt.query_named(&[(":ring_id", ring_id)]).unwrap();
+        let mut stmt = conn.prepare("SELECT id, hash, username, devicename, is_bridge FROM devices \
+            WHERE hash=:hash AND username=:username").unwrap();
+        let mut rows = stmt.query_named(&[(":hash", hash), (":username", username)]).unwrap();
         while let Some(row) = rows.next() {
             let row = row.unwrap();
-            return (row.get(0), row.get(1), row.get(2));
+            return (row.get(0), row.get(1), row.get(2), row.get(3), row.get(4));
         }
-        (String::new(), String::new(), String::new())
+        (-1, String::new(), String::new(), String::new(), 0)
     }
 
     /**
      * Return all devices
-     * @return a Vector of devices (ring_id, username, devicename)
+     * @return a Vector of devices (id, hash, username, devicename, is_bridge)
      */
-    pub fn get_devices() -> Vec<(String, String, String)> {
-        let mut devices: Vec<(String, String, String)> = Vec::new();
+    pub fn get_devices() -> Vec<(i32, String, String, String, bool)> {
+        let mut devices: Vec<(i32, String, String, String, bool)> = Vec::new();
         let conn = rusqlite::Connection::open("rori.db").unwrap();
-        let mut stmt = conn.prepare("SELECT ring_id, username, devicename FROM devices").unwrap();
+        let mut stmt = conn.prepare("SELECT id, hash, username, devicename, is_bridge FROM devices").unwrap();
         let mut rows = stmt.query(&[]).unwrap();
         while let Some(row) = rows.next() {
             let row = row.unwrap();
-            devices.push((row.get(0), row.get(1), row.get(2)));
+            devices.push((row.get(0), row.get(1), row.get(2), row.get(3), row.get(4)));
+        }
+        devices
+    }
+
+    /**
+     * @note till Rust doesn't supports optional parameters
+     * Return all devices for a hash
+     * @return a Vector of devices (id, hash, username, devicename, is_bridge)
+     */
+    pub fn get_devices_for_hash(hash: &str) -> Vec<(i32, String, String, String, bool)> {
+        let mut devices: Vec<(i32, String, String, String, bool)> = Vec::new();
+        let conn = rusqlite::Connection::open("rori.db").unwrap();
+        let mut stmt = conn.prepare("SELECT id, hash, username, devicename, is_bridge FROM devices \
+            WHERE hash=:hash").unwrap();
+       let mut rows = stmt.query_named(&[(":hash", &hash.to_string())]).unwrap();
+        while let Some(row) = rows.next() {
+            let row = row.unwrap();
+            devices.push((row.get(0), row.get(1), row.get(2), row.get(3), row.get(4)));
+        }
+        devices
+    }
+
+    /**
+     * @note till Rust doesn't supports optional parameters
+     * Return all devices for an username
+     * @return a Vector of devices (id, hash, username, devicename, is_bridge)
+     */
+    pub fn get_devices_for_username(username: &str) -> Vec<(i32, String, String, String, bool)> {
+        let mut devices: Vec<(i32, String, String, String, bool)> = Vec::new();
+        let conn = rusqlite::Connection::open("rori.db").unwrap();
+        let mut stmt = conn.prepare("SELECT id, username, username, devicename, is_bridge FROM devices \
+            WHERE username=:username").unwrap();
+       let mut rows = stmt.query_named(&[(":username", &username.to_string())]).unwrap();
+        while let Some(row) = rows.next() {
+            let row = row.unwrap();
+            devices.push((row.get(0), row.get(1), row.get(2), row.get(3), row.get(4)));
         }
         devices
     }
@@ -210,13 +249,13 @@ impl Database {
 
     /**
      * Remove a device from the devices table
-     * @param ring_id to remove
+     * @param hash to remove
      * @return the id of the removed row or an error
      */
-    pub fn remove_device(ring_id: &String) -> Result<i32, rusqlite::Error> {
+    pub fn remove_device(id: &i32) -> Result<i32, rusqlite::Error> {
         let conn = rusqlite::Connection::open("rori.db").unwrap();
-        let mut conn = conn.prepare("DELETE FROM devices WHERE ring_id=:ring_id").unwrap();
-        conn.execute_named(&[(":ring_id", ring_id)])
+        let mut conn = conn.prepare("DELETE FROM devices WHERE id=:id").unwrap();
+        conn.execute_named(&[(":id", id)])
     }
 
     /**
@@ -237,14 +276,14 @@ impl Database {
     }
 
     /**
-     * Search a ring_id
-     * @param ring_id to search
+     * Search a hash
+     * @param hash to search
      * @return if found
      */
-    pub fn search_ring_id(ring_id: &String) -> bool {
+    pub fn search_hash(hash: &String) -> bool {
         let conn = rusqlite::Connection::open("rori.db").unwrap();
-        let mut stmt = conn.prepare("SELECT * FROM devices WHERE ring_id=:ring_id").unwrap();
-        let mut rows = stmt.query_named(&[(":ring_id", ring_id)]).unwrap();
+        let mut stmt = conn.prepare("SELECT * FROM devices WHERE hash=:hash").unwrap();
+        let mut rows = stmt.query_named(&[(":hash", hash)]).unwrap();
         while let Some(_) = rows.next() {
             return true;
         }
@@ -272,38 +311,38 @@ impl Database {
 
     /**
      * Set additional supported types for a device
-     * @param ring_id of the device to modify
+     * @param id of the device to modify
      * @param datatypes to set
      * @return if success
      */
-    pub fn set_datatypes(ring_id: &String, datatypes: Vec<String>) -> Result<i32, rusqlite::Error> {
+    pub fn set_datatypes(id: &i32, datatypes: Vec<String>) -> Result<i32, rusqlite::Error> {
         let datatypes = datatypes.join(" ");
         let conn = rusqlite::Connection::open("rori.db").unwrap();
-        let mut stmt = conn.prepare("UPDATE devices SET additional_types=:additional_types WHERE ring_id=:ring_id").unwrap();
-        stmt.execute_named(&[(":ring_id", ring_id), (":additional_types", &String::from(datatypes))])
+        let mut stmt = conn.prepare("UPDATE devices SET additional_types=:additional_types WHERE id=:id").unwrap();
+        stmt.execute_named(&[(":id", id), (":additional_types", &String::from(datatypes))])
     }
 
     /**
      * Update a devicename
-     * @param ring_id to search
+     * @param hash to search
      * @param devicename new devicename
      * @return the id of the modified row if success else an error
      */
-    pub fn update_devicename(ring_id: &String, devicename: &String) -> Result<i32, rusqlite::Error> {
+    pub fn update_devicename(hash: &String, devicename: &String) -> Result<i32, rusqlite::Error> {
         let conn = rusqlite::Connection::open("rori.db").unwrap();
-        let mut stmt = conn.prepare("UPDATE devices SET devicename=:devicename WHERE ring_id=:ring_id").unwrap();
-        stmt.execute_named(&[(":ring_id", ring_id), (":devicename", devicename)])
+        let mut stmt = conn.prepare("UPDATE devices SET devicename=:devicename WHERE hash=:hash").unwrap();
+        stmt.execute_named(&[(":hash", hash), (":devicename", devicename)])
     }
 
     /**
      * Update a username
-     * @param ring_id to search
+     * @param hash to search
      * @param username new username
      * @return the id of the modified row if success else an error
      */
-    pub fn update_username(ring_id: &String, username: &String) -> Result<i32, rusqlite::Error> {
+    pub fn update_username(hash: &String, username: &String) -> Result<i32, rusqlite::Error> {
         let conn = rusqlite::Connection::open("rori.db").unwrap();
-        let mut stmt = conn.prepare("UPDATE devices SET username=:username WHERE ring_id=:ring_id").unwrap();
-        stmt.execute_named(&[(":ring_id", ring_id), (":username", username)])
+        let mut stmt = conn.prepare("UPDATE devices SET username=:username WHERE hash=:hash").unwrap();
+        stmt.execute_named(&[(":hash", hash), (":username", username)])
     }
 }

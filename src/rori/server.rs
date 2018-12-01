@@ -75,13 +75,14 @@ impl Server {
     pub fn add_new_anonymous_device(&mut self, ring_id: &String) -> bool {
         let insert_into_db = Database::insert_new_device(ring_id, &String::new(), &String::new());
         match insert_into_db {
-            Ok(_) => {}
+            Ok(i) => {
+                self.anonymous_user.devices.push(Device::new(&i, &ring_id));
+            }
             _ => {
                 error!("add_new_anonymous_device failed");
                 return false;
             }
         }
-        self.anonymous_user.devices.push(Device::new(&ring_id));
         info!("{} added to anonymouses", ring_id);
         true
     }
@@ -188,21 +189,23 @@ impl Server {
                 }
             }
 
+            let device = Database::get_device(&interaction.author_ring_id, &username);
+
             if interaction.body.starts_with("/add_types") {
                 // Handle add_type
                 let mut split: Vec<&str> = interaction.body.split(' ').collect();
                 split.remove(0);
-                self.add_datatypes(&interaction.author_ring_id, split);
+                self.add_datatypes(&device.0, split);
             } else if interaction.body.starts_with("/rm_types") {
                 // Handle rm_type
                 let mut split: Vec<&str> = interaction.body.split(' ').collect();
                 split.remove(0);
-                self.rm_datatypes(&interaction.author_ring_id, split);
+                self.rm_datatypes(&device.0, split);
             } else if interaction.body.starts_with("/set_types") {
                 // Handle set_type
                 let mut split: Vec<&str> = interaction.body.split(' ').collect();
                 split.remove(0);
-                self.set_datatypes(&interaction.author_ring_id, split);
+                self.set_datatypes(&device.0, split);
             } else if interaction.body.starts_with("/link") {
                 // Handle multi-devices
                 let split: Vec<&str> = interaction.body.split(' ').collect();
@@ -227,15 +230,15 @@ impl Server {
      * @param self
      * @param devices to process
      */
-    pub fn load_devices(&mut self, devices: Vec<(String, String, String)>) {
-        for (id, username, devicename) in devices {
+    pub fn load_devices(&mut self, devices: Vec<(i32, String, String, String, bool)>) {
+        for (id, hash, username, devicename, is_bridge) in devices {
             if username == "" {
                 // it's an anon user.
-                self.anonymous_user.devices.push(Device::new(&id));
-                info!("new anonymous user: {}", id);
+                self.anonymous_user.devices.push(Device::new(&id, &hash));
+                info!("new anonymous user: {}", hash);
             } else {
                 let mut already_present = false;
-                let mut device = Device::new(&id);
+                let mut device = Device::new(&id, &hash);
                 device.name = devicename;
                 // Add a device to a known User
                 for registered in &mut self.registered_users {
@@ -284,15 +287,15 @@ impl Server {
      * @param device_ring_id
      * @param add_types to add
      */
-    fn add_datatypes(&self, device_ring_id: &str, add_types: Vec<&str>) {
-        let mut current_datatypes = Database::get_datatypes(&String::from(device_ring_id));
+    fn add_datatypes(&self, device_id: &i32, add_types: Vec<&str>) {
+        let mut current_datatypes = Database::get_datatypes(&device_id);
         for dtype in add_types.into_iter() {
             match current_datatypes.iter().position(|dt| dt == dtype) {
                 Some(_) => {},
                 None => current_datatypes.push(String::from(dtype))
             }
         }
-        let _ = Database::set_datatypes(&String::from(device_ring_id), current_datatypes);
+        let _ = Database::set_datatypes(&device_id, current_datatypes);
     }
 
     /**
@@ -302,6 +305,8 @@ impl Server {
      * @param username new device username
      */
     fn move_ring_to_user(&mut self, ring_id: &String, username: &String) {
+        // TODO REDO THIS
+        /*
         // Remove from anonymous_user
         let index = self.anonymous_user.devices.iter().position(|d| d.ring_id == *ring_id).unwrap();
         self.anonymous_user.devices.remove(index);
@@ -312,16 +317,16 @@ impl Server {
             }
         }
         // Update database
-        let _ = Database::update_username(ring_id, username);
+        let _ = Database::update_username(ring_id, username);*/
     }
 
     /**
      * Remove some datatypes of a device
-     * @param device_ring_id
+     * @param id
      * @param add_types to remove
      */
-    fn rm_datatypes(&self, device_ring_id: &str, add_types: Vec<&str>) {
-        let mut current_datatypes = Database::get_datatypes(&String::from(device_ring_id));
+    fn rm_datatypes(&self, id: &i32, add_types: Vec<&str>) {
+        let mut current_datatypes = Database::get_datatypes(id);
         for dtype in add_types.into_iter() {
             match current_datatypes.iter().position(|dt| dt == dtype) {
                 Some(p) => {
@@ -330,7 +335,7 @@ impl Server {
                 None => {}
             }
         }
-        let _ = Database::set_datatypes(&String::from(device_ring_id), current_datatypes);
+        let _ = Database::set_datatypes(id, current_datatypes);
     }
 
     /**
@@ -340,6 +345,8 @@ impl Server {
      * @param argument the ring_id if registered, the username if not
      */
     fn try_link_new_device(&mut self, from_id: &String, argument: &String) {
+        // TODO, is it safe???
+        /*
         // Retrieve users from database
         // TODO inform user that a new device is linked?
         let (from_id, from_user, _) = Database::get_device(from_id);
@@ -396,6 +403,7 @@ impl Server {
                 self.id_to_account_linker.remove(index);
             }
         }
+        */
     }
 
     /**
@@ -406,6 +414,8 @@ impl Server {
      * @param devicename new devicename
      */
     fn try_register_device(&mut self, from_id: &String, ring_id: &String, username: &String, devicename: &String) {
+        // TODO is it safe?
+        /*
         let id = self.account.id.clone();
         let (from_id, from_user, _) = Database::get_device(from_id);
         let (mod_id, mod_user, _) = Database::get_device(ring_id);
@@ -442,6 +452,7 @@ impl Server {
             info!("{}", msg);
             self.send_interaction(&*id, &*from_id, &*format!("{{\"registered\":true, \"devicename\":\"{}\"", devicename), "rori/message");
         }
+        */
     }
 
     /**
@@ -451,6 +462,8 @@ impl Server {
      * @param username new username
      */
     fn try_register_username(&mut self, ring_id: &String, username: &String) {
+        // TODO is it safe?
+        /*
         let id = self.account.id.clone();
         // Lookup if it's already registered
         if self.get_ring_id(username).len() > 0 {
@@ -473,7 +486,7 @@ impl Server {
             let msg = format!("{} is now known as {}", ring_id, username);
             info!("{}", msg);
             self.send_interaction(&*id, ring_id, &*format!("{{\"registered\":true, \"username\":\"{}\"}}", username), "rori/message");
-        }
+        }*/
     }
 
     /**
@@ -483,6 +496,8 @@ impl Server {
      * @param ring_id to revoke
      */
     fn try_remove_device(&mut self, from_id: &String, ring_id: &String) {
+        // TODO is it safe?
+        /*
         let id = self.account.id.clone();
         let (from_id, from_user, _) = Database::get_device(from_id);
         let (mod_id, mod_user, _) = Database::get_device(ring_id);
@@ -533,6 +548,7 @@ impl Server {
             self.send_interaction(&*id, &*from_id, &*format!("{{\"registered\":true, \"device\":\"{}\", \"err\":\"device not found\"}}", ring_id), "rori/message");
             warn!("{}", msg);
         }
+        */
     }
 
     /**
@@ -541,7 +557,8 @@ impl Server {
      * @param ring_id to revoke
      */
     fn try_unregister(&mut self, ring_id: &String) {
-        let id = self.account.id.clone();
+        // TODO redo this
+        /*let id = self.account.id.clone();
         // Search username
         let mut name = String::new();
         for registered in &mut self.registered_users {
@@ -578,6 +595,7 @@ impl Server {
             idx += 1;
         }
         self.registered_users.remove(idx);
+        */
     }
 
     /**
@@ -608,14 +626,14 @@ impl Server {
 
     /**
      * Change the datatypes of a device
-     * @param device_ring_id
+     * @param id
      * @param datatypes
      */
-    fn set_datatypes(&self, device_ring_id: &str, datatypes: Vec<&str>) {
+    fn set_datatypes(&self, id: &i32, datatypes: Vec<&str>) {
         let mut dt: Vec<String> = Vec::new();
         for datatype in datatypes.into_iter() {
             dt.push(String::from(datatype));
         }
-        let _ = Database::set_datatypes(&String::from(device_ring_id), dt);
+        let _ = Database::set_datatypes(&id, dt);
     }
 }

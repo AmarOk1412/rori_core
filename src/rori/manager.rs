@@ -331,7 +331,7 @@ impl Manager {
         // Remove non existing devices
         let mut idx: usize = 0;
         for device in db_devices.clone() {
-            match ring_devices.iter().position(|c| c == &*device.0) {
+            match ring_devices.iter().position(|c| c == &*device.1) {
                 Some(_) => {
                     idx += 1;
                 },
@@ -346,13 +346,13 @@ impl Manager {
 
         // Add new devices
         for device in &ring_devices {
-            match db_devices.iter().position(|c| &*c.0 == &*device) {
+            match db_devices.iter().position(|c| &*c.1 == &*device) {
                 Some(_) => {},
                 None => {
                     info!("{} found from daemon but not in daemon, update db.", device);
-                    db_devices.push((device.clone(), String::new(), String::new()));
                     let error_msg = format!("Failed to insert {} from database", device);
-                    Database::insert_new_device(&device, &String::new(), &String::new()).ok().expect(&*error_msg);
+                    let result = Database::insert_new_device(&device, &String::new(), &String::new()).ok().expect(&*error_msg);
+                    db_devices.push((result, device.clone(), String::new(), String::new(), false));
                 }
             }
         }

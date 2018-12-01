@@ -31,19 +31,24 @@
  */
 #[derive(Debug, Clone)]
 pub struct Device {
+    pub id: i32,
     pub name: String,
-    pub ring_id: String
+    pub ring_id: String,
+    pub is_bridge: bool
 }
 
 impl Device {
     /**
      * Generate a new device for the given ring_id
+     * @param id
      * @param ring_id
      */
-    pub fn new(ring_id: &String) -> Device {
+    pub fn new(id: &i32, ring_id: &String) -> Device {
         Device {
+            id: id.clone(),
             name: String::new(),
-            ring_id: ring_id.clone()
+            ring_id: ring_id.clone(),
+            is_bridge: false
         }
     }
 }

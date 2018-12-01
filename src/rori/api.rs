@@ -147,7 +147,9 @@ struct AddrHandler { }
  */
 #[derive(Serialize, Deserialize)]
 struct AddrResponse {
-    name: String,
+    name: String, // The first user
+    is_bridge: bool,
+    users_list: String
 }
 
 /**
@@ -164,13 +166,29 @@ impl Handler for AddrHandler {
         let ring_id = request.extensions.get::<Router>().unwrap().find("addr").unwrap_or("");
         info!("GET /addr/{}", ring_id);
 
-        // get username
-        let (found_id, username, _) = Database::get_device(&String::from(ring_id));
+        // get usernames
+        let devices = Database::get_devices_for_hash(&String::from(ring_id));
+        let mut username = String::new();
+        let mut is_bridge = false;
+        let mut users_list = String::new();
 
         // Build the response
-        if found_id.len() > 0 {
+        if devices.len() > 0 {
+            let mut is_first = true;
+            for (_, _, u, _, ib) in devices {
+                if is_first {
+                    is_first = false;
+                    username = u.clone();
+                    is_bridge = ib;
+                }
+                users_list += &*u;
+                users_list += ";";
+            }
+
             let answer = AddrResponse {
                 name: username,
+                is_bridge: is_bridge,
+                users_list: users_list,
             };
             let response = serde_json::to_string(&answer).unwrap_or(String::new());
             return Ok(Response::with((content_type, status::Ok, response)))
