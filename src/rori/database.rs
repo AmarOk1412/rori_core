@@ -109,6 +109,7 @@ impl Database {
      */
     pub fn get_modules_datatypes() -> Vec<String> {
         let mut datatypes = Vec::new();
+        datatypes.push(String::from("text/plain")); // Basic datatype handled by the core
         datatypes.push(String::from("rori/command")); // Basic datatype handled by the core
         let conn = rusqlite::Connection::open("rori.db").unwrap();
         let mut stmt = conn.prepare("SELECT DISTINCT type FROM modules;").unwrap();
