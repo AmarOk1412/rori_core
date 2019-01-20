@@ -231,7 +231,7 @@ impl Server {
      * @param devices to process
      */
     pub fn load_devices(&mut self, devices: Vec<(i32, String, String, String, bool)>) {
-        for (id, hash, username, devicename, is_bridge) in devices {
+        for (id, hash, username, devicename, _is_bridge) in devices {
             if username == "" {
                 // it's an anon user.
                 self.anonymous_user.devices.push(Device::new(&id, &hash));

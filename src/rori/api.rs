@@ -123,6 +123,19 @@ impl Handler for NameHandler {
         let content_type = "application/json".parse::<Mime>().unwrap();
         let name = request.extensions.get::<Router>().unwrap().find("name").unwrap_or("");
         info!("GET /name/{}", name);
+        // rori's name is reserved
+        if name.to_lowercase() == "rori" {
+            let rori_addr = &self.manager.lock().unwrap().server.account.ring_id;
+            let addr = format!("0x{}", rori_addr);
+            let answer = NameResponse {
+                name: String::from(name),
+                addr: addr,
+                full_devices: String::new(),
+                bridges_devices: String::new(),
+            };
+            let response = serde_json::to_string(&answer).unwrap_or(String::new());
+            return Ok(Response::with((content_type, status::Ok, response)))
+        }
         let devices = Database::get_devices_for_username(&String::from(name));
         // Build the response
         if devices.len() > 0 {
