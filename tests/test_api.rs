@@ -70,7 +70,7 @@ mod tests_api {
         thread::sleep(three_secs);
 
         let client = reqwest::ClientBuilder::new()
-                    .danger_disable_certificate_validation_entirely()
+                    .danger_accept_invalid_certs(true)
                     .build().unwrap();
 
         let mut res = match client.get("https://127.0.0.1:1412/name/rori").send() {
@@ -154,7 +154,7 @@ mod tests_api {
         thread::sleep(three_secs);
 
         let client = reqwest::ClientBuilder::new()
-                    .danger_disable_certificate_validation_entirely()
+                    .danger_accept_invalid_certs(true)
                     .build().unwrap();
 
         let mut res = match client.get("https://127.0.0.1:1413/addr/weasley_id").send() {
