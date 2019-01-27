@@ -351,7 +351,7 @@ impl Manager {
                 None => {
                     info!("{} found from daemon but not in daemon, update db.", device);
                     let error_msg = format!("Failed to insert {} from database", device);
-                    let result = Database::insert_new_device(&device, &String::new(), &String::new()).ok().expect(&*error_msg);
+                    let result = Database::insert_new_device(&device, &String::new(), &String::new(), false).ok().expect(&*error_msg);
                     db_devices.push((result, device.clone(), String::new(), String::new(), false));
                 }
             }

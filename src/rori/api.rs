@@ -126,7 +126,7 @@ impl Handler for NameHandler {
         // rori's name is reserved
         if name.to_lowercase() == "rori" {
             let rori_addr = &self.manager.lock().unwrap().server.account.ring_id;
-            let addr = format!("0x{}", rori_addr);
+            let addr = format!("0x{}", rori_addr.replace("ring:", ""));
             let answer = NameResponse {
                 name: String::from(name),
                 addr: addr,

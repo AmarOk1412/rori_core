@@ -73,7 +73,7 @@ impl Server {
      * @param ring_id device to add
      */
     pub fn add_new_anonymous_device(&mut self, ring_id: &String) -> bool {
-        let insert_into_db = Database::insert_new_device(ring_id, &String::new(), &String::new());
+        let insert_into_db = Database::insert_new_device(ring_id, &String::new(), &String::new(), false);
         match insert_into_db {
             Ok(i) => {
                 self.anonymous_user.devices.push(Device::new(&i, &ring_id));
@@ -93,7 +93,7 @@ impl Server {
      * @param name username or devicename to find
      * @return the ring_id if found, else an empty String
      */
-    pub fn get_ring_id(&mut self, name: &String) -> String {
+    pub fn get_hash(&mut self, name: &String) -> String {
         if name.to_lowercase() == "rori" {
             return self.account.ring_id.clone();
         }
@@ -196,6 +196,9 @@ impl Server {
                 let mut split: Vec<&str> = interaction.body.split(' ').collect();
                 split.remove(0);
                 self.add_datatypes(&device.0, split);
+            } else if interaction.body.starts_with("/bridgify") {
+                // Handle add_type
+                self.bridgify(&device.0);
             } else if interaction.body.starts_with("/rm_types") {
                 // Handle rm_type
                 let mut split: Vec<&str> = interaction.body.split(' ').collect();
@@ -284,7 +287,7 @@ impl Server {
 
     /**
      * Add some datatypes of a device
-     * @param device_ring_id
+     * @param device_id
      * @param add_types to add
      */
     fn add_datatypes(&self, device_id: &i32, add_types: Vec<&str>) {
@@ -296,6 +299,22 @@ impl Server {
             }
         }
         let _ = Database::set_datatypes(&device_id, current_datatypes);
+    }
+
+    /**
+     * Change a device to a bridge
+     * @param device_id
+     */
+    fn bridgify(&mut self, device_id: &i32) {
+        // Update database
+        let _ = Database::bridgify(&device_id);
+        // Update anonymous user
+        let index = self.anonymous_user.devices.iter().position(|d| d.id == *device_id).unwrap();
+        let mut new_device = self.anonymous_user.devices.get(index).unwrap().clone();
+        new_device.is_bridge = true;
+        self.anonymous_user.devices.remove(index);
+        self.anonymous_user.devices.push(new_device);
+        info!("Device {} is now a bridge", &device_id);
     }
 
     /**
@@ -428,7 +447,7 @@ impl Server {
             return;
         }
         // Search if it's already registered
-        if self.get_ring_id(&format!("{}_{}", username, devicename)).len() > 0 {
+        if self.get_hash(&format!("{}_{}", username, devicename)).len() > 0 {
             let err = format!("registering {} for {} failed because devicename was found", devicename, ring_id);
             warn!("{}", err);
             self.send_interaction(&*id, ring_id, &*format!("{{\"registered\":false, \"devicename\":\"{}\", \"err\":\"{}_{} already registered\"}}", devicename, username, devicename), "rori/message");
@@ -458,35 +477,54 @@ impl Server {
     /**
      * Try to link to a new User a device and inform the device
      * @param self
-     * @param ring_id to register
+     * @param hash to register
      * @param username new username
      */
-    fn try_register_username(&mut self, ring_id: &String, username: &String) {
-        // TODO is it safe?
-        /*
+    fn try_register_username(&mut self, hash: &String, username: &String) {
+
         let id = self.account.id.clone();
-        // Lookup if it's already registered
-        if self.get_ring_id(username).len() > 0 {
-            let err = format!("registering {} for {} failed because username was found", username, ring_id);
+        let already_taken = self.get_hash(username).len() > 0;
+        if already_taken {
+            let err = format!("registering {} for {} failed because username was found", username, hash);
             warn!("{}", err);
-            self.send_interaction(&*id, ring_id, &*format!("{{\"registered\":false, \"username\":\"{}\", \"err\":\"{} already registered\"}}", username, username), "rori/message");
+            self.send_interaction(&*id, hash, &*format!("{{\"registered\":false, \"username\":\"{}\", \"err\":\"{} already registered\"}}", username, username), "rori/message");
         } else {
             // Register!
-            Database::update_username(ring_id, username)
-            .ok().expect(&*format!("registering {} for {} failed when updating db", username, ring_id));
-            // Remove from anonymous_user
-            let index = self.anonymous_user.devices.iter().position(|d| d.ring_id == *ring_id).unwrap();
-            self.anonymous_user.devices.remove(index);
-            // Create new user
-            let mut new_user = User::new();
-            new_user.name = username.clone();
-            new_user.devices.push(Device::new(ring_id));
-            self.registered_users.push(new_user);
+            let is_bridge = Database::is_bridge(hash);
+            if is_bridge {
+                // Add a new device for user
+                // NOTE: do not remove from anonymouses, it's a bridge!
+                let insert_into_db = Database::insert_new_device(hash, username, &String::new(), true);
+                match insert_into_db {
+                    Ok(i) => {
+                        let mut new_user = User::new();
+                        new_user.name = username.clone();
+                        new_user.devices.push(Device::new(&i, hash));
+                        self.registered_users.push(new_user);
+                    }
+                    _ => {
+                        error!("try_register_username failed when inserting new device");
+                        return;
+                    }
+                }
+            } else {
+                Database::update_username(hash, username)
+                .ok().expect(&*format!("registering {} for {} failed when updating db", username, hash));
+                // Remove from anonymous_user
+                let index = self.anonymous_user.devices.iter().position(|d| d.ring_id == *hash).unwrap();
+                let id = self.anonymous_user.devices.get(index).unwrap().id;
+                self.anonymous_user.devices.remove(index);
+                // Create new user
+                let mut new_user = User::new();
+                new_user.name = username.clone();
+                new_user.devices.push(Device::new(&id, hash));
+                self.registered_users.push(new_user);
+            }
             // Inform user that they is registered.
-            let msg = format!("{} is now known as {}", ring_id, username);
+            let msg = format!("{} is now known as {}", hash, username);
             info!("{}", msg);
-            self.send_interaction(&*id, ring_id, &*format!("{{\"registered\":true, \"username\":\"{}\"}}", username), "rori/message");
-        }*/
+            self.send_interaction(&*id, hash, &*format!("{{\"registered\":true, \"username\":\"{}\"}}", username), "rori/message");
+        }
     }
 
     /**

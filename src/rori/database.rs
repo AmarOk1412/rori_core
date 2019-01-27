@@ -35,6 +35,17 @@ pub struct Database;
 
 impl Database {
     /**
+     * Set is_bridge to true
+     * @param id of the device to modify
+     * @return if success
+     */
+    pub fn bridgify(id: &i32) -> Result<i32, rusqlite::Error> {
+        let conn = rusqlite::Connection::open("rori.db").unwrap();
+        let mut stmt = conn.prepare("UPDATE devices SET is_bridge=1 WHERE id=:id").unwrap();
+        stmt.execute_named(&[(":id", id)])
+    }
+
+    /**
      * Create tables in rori.db
      * NOTE: maybe has to change in case of migrations
      */
@@ -77,6 +88,16 @@ impl Database {
             conn.execute("PRAGMA user_version = 1", &[]).unwrap();
         }
         info!("database ready");
+    }
+
+    pub fn is_bridge(hash: &String) -> bool {
+        let conn = rusqlite::Connection::open("rori.db").unwrap();
+        let mut stmt = conn.prepare("SELECT additional_types FROM devices WHERE hash=:hash AND is_bridge=1").unwrap();
+        let mut rows = stmt.query_named(&[(":hash", hash)]).unwrap();
+        if let Some(row) = rows.next() {
+            return true;
+        }
+        false
     }
 
     /**
@@ -129,11 +150,11 @@ impl Database {
      * @param devicename device's name related
      * @return the line's id inserted if success, else an error
      */
-    pub fn insert_new_device(hash: &String, username: &String, devicename: &String) -> Result<i32, rusqlite::Error> {
+    pub fn insert_new_device(hash: &String, username: &String, devicename: &String, is_bridge: bool) -> Result<i32, rusqlite::Error> {
         let conn = rusqlite::Connection::open("rori.db").unwrap();
         let mut conn = conn.prepare("INSERT INTO devices (hash, username, devicename, additional_types, is_bridge)
-                                     VALUES (:hash, :username, :devicename, \"\", 0)").unwrap();
-        conn.execute_named(&[(":hash", hash), (":username", username), (":devicename", devicename)])
+                                     VALUES (:hash, :username, :devicename, \"\", :is_bridge)").unwrap();
+        conn.execute_named(&[(":hash", hash), (":username", username), (":devicename", devicename), (":is_bridge", &is_bridge)])
     }
 
     /**
@@ -222,7 +243,7 @@ impl Database {
     pub fn get_devices_for_username(username: &str) -> Vec<(i32, String, String, String, bool)> {
         let mut devices: Vec<(i32, String, String, String, bool)> = Vec::new();
         let conn = rusqlite::Connection::open("rori.db").unwrap();
-        let mut stmt = conn.prepare("SELECT id, username, username, devicename, is_bridge FROM devices \
+        let mut stmt = conn.prepare("SELECT id, hash, username, devicename, is_bridge FROM devices \
             WHERE username=:username").unwrap();
        let mut rows = stmt.query_named(&[(":username", &username.to_string())]).unwrap();
         while let Some(row) = rows.next() {
