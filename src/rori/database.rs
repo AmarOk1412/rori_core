@@ -100,6 +100,16 @@ impl Database {
         false
     }
 
+    pub fn is_bridge_with_username(hash: &String, username: &String) -> bool {
+        let conn = rusqlite::Connection::open("rori.db").unwrap();
+        let mut stmt = conn.prepare("SELECT additional_types FROM devices WHERE hash=:hash AND username=:username AND is_bridge=1").unwrap();
+        let mut rows = stmt.query_named(&[(":hash", hash), (":username", username)]).unwrap();
+        if let Some(row) = rows.next() {
+            return true;
+        }
+        false
+    }
+
     /**
      * get additional supported types for a device (text/plain is supported by default)
      * NOTE: because this is only used by rori_modules, don't have to save it on the rust side
@@ -154,7 +164,14 @@ impl Database {
         let conn = rusqlite::Connection::open("rori.db").unwrap();
         let mut conn = conn.prepare("INSERT INTO devices (hash, username, devicename, additional_types, is_bridge)
                                      VALUES (:hash, :username, :devicename, \"\", :is_bridge)").unwrap();
-        conn.execute_named(&[(":hash", hash), (":username", username), (":devicename", devicename), (":is_bridge", &is_bridge)])
+        match conn.execute_named(&[(":hash", hash), (":username", username), (":devicename", devicename), (":is_bridge", &is_bridge)]) {
+            Ok(_) => {
+                return Ok(Database::get_device(hash, username).0);
+            }
+            Err(e) => {
+                return Err(e);
+            }
+        }
     }
 
     /**

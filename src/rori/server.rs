@@ -120,30 +120,41 @@ impl Server {
     pub fn handle_interaction(&mut self, interaction: Interaction) {
         // Find linked device
         let mut username = String::new();
-        let mut user_found = false;
-        for device in &self.anonymous_user.devices {
-            if &*interaction.author_ring_id == &*device.ring_id {
-                user_found = true;
-                break;
+        let is_bridge = Database::is_bridge(&interaction.author_ring_id);
+
+        if !is_bridge {
+            let mut user_found = false;
+            for device in &self.anonymous_user.devices {
+                if &*interaction.author_ring_id == &*device.ring_id {
+                    user_found = true;
+                    break;
+                }
             }
-        }
-        if !user_found {
-            // User not found, continue to search.
-            for mut registered in &self.registered_users {
-                for device in &registered.devices {
-                    if &*interaction.author_ring_id == &*device.ring_id {
-                        user_found = true;
-                        username = registered.name.clone();
-                        break;
+            if !user_found {
+                // User not found, continue to search.
+                for mut registered in &self.registered_users {
+                    for device in &registered.devices {
+                        if &*interaction.author_ring_id == &*device.ring_id {
+                            user_found = true;
+                            username = registered.name.clone();
+                            break;
+                        }
                     }
                 }
             }
-        }
-
-        if !user_found {
-            // User not found add it
-            self.add_contact(&*self.account.id, &*interaction.author_ring_id);
-            self.add_new_anonymous_device(&interaction.author_ring_id);
+            if !user_found {
+                // User not found add it
+                self.add_contact(&*self.account.id, &*interaction.author_ring_id);
+                self.add_new_anonymous_device(&interaction.author_ring_id);
+            }
+        } else {
+            let sub_author = match interaction.metadatas.get("sa") {
+                Some(sa) => sa.to_string(),
+                None => String::new()
+            };
+            if sub_author.len() > 0 {
+                username = sub_author;
+            }
         }
 
         // TODO should be handle by a module
@@ -185,7 +196,7 @@ impl Server {
                     self.try_remove_device(&interaction.author_ring_id, &device_to_remove);
                 } else if interaction.body.starts_with("/unregister") {
                     // User wants to unregister
-                    self.try_unregister(&interaction.author_ring_id);
+                    self.try_unregister(&interaction.author_ring_id, &username);
                 }
             }
 
@@ -592,48 +603,61 @@ impl Server {
     /**
      * Try to remove a user and its devices
      * @param self
-     * @param ring_id to revoke
+     * @param hash of the device to revoke
+     * @param username to revoke
      */
-    fn try_unregister(&mut self, ring_id: &String) {
-        // TODO redo this
-        /*let id = self.account.id.clone();
-        // Search username
+    fn try_unregister(&mut self, hash: &String, username: &String) {
         let mut name = String::new();
-        for registered in &mut self.registered_users {
-            for device in &mut registered.devices {
-                if device.ring_id == *ring_id {
-                    name = registered.name.clone();
+        let is_bridge = Database::is_bridge(hash);
+        if is_bridge {
+            name = username.clone();
+            if !Database::is_bridge_with_username(hash, username) {
+                warn!("{} is trying to unregister another user", hash);
+                return;
+            }
+        } else {
+            // Search username
+            for registered in &mut self.registered_users {
+                for device in &mut registered.devices {
+                    if device.ring_id == *hash {
+                        name = registered.name.clone();
+                        break;
+                    }
+                }
+                if name.len() > 0 {
                     break;
                 }
             }
-            if name.len() > 0 {
-                break;
+            // anonymous
+            if name.len() == 0 {
+                return;
             }
         }
-        // anonymous
-        if name.len() == 0 {
-            return;
-        }
+        let id = self.account.id.clone();
 
         let mut idx = 0;
         // Update registered_users and anonymous
         for registered in &mut self.registered_users.clone() {
             if registered.name == &*name {
                 for device in &mut registered.devices {
-                    let _ = Database::update_username(ring_id, &String::new());
-                    let _ = Database::update_devicename(ring_id, &String::new());
-                    self.anonymous_user.devices.push(Device::new(&ring_id));
+                    let is_bridge = Database::is_bridge(&device.ring_id);
+                    if is_bridge {
+                        let _ = Database::remove_device(&device.id);
+                    } else {
+                        let _ = Database::update_username(&device.ring_id, &String::new());
+                        let _ = Database::update_devicename(&device.ring_id, &String::new());
+                        self.anonymous_user.devices.push(Device::new(&device.id, &device.ring_id));
+                    }
                     info!("update device {} for {}", device.ring_id, registered.name);
                 }
                 let mut msg = format!("{} unregistered", registered.name);
                 info!("{}", msg);
-                self.send_interaction(&*id, ring_id, &*format!("{{\"registered\":false, \"username\":\"{}\"}}", registered.name), "rori/message");
+                self.send_interaction(&*id, hash, &*format!("{{\"registered\":false, \"username\":\"{}\"}}", registered.name), "rori/message");
                 break;
             }
             idx += 1;
         }
         self.registered_users.remove(idx);
-        */
     }
 
     /**
