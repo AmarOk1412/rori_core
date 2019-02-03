@@ -363,25 +363,25 @@ impl Database {
 
     /**
      * Update a devicename
-     * @param hash to search
+     * @param id to search
      * @param devicename new devicename
      * @return the id of the modified row if success else an error
      */
-    pub fn update_devicename(hash: &String, devicename: &String) -> Result<i32, rusqlite::Error> {
+    pub fn update_devicename(id: &String, devicename: &String) -> Result<i32, rusqlite::Error> {
         let conn = rusqlite::Connection::open("rori.db").unwrap();
-        let mut stmt = conn.prepare("UPDATE devices SET devicename=:devicename WHERE hash=:hash").unwrap();
-        stmt.execute_named(&[(":hash", hash), (":devicename", devicename)])
+        let mut stmt = conn.prepare("UPDATE devices SET devicename=:devicename WHERE id=:id").unwrap();
+        stmt.execute_named(&[(":id", id), (":devicename", devicename)])
     }
 
     /**
      * Update a username
-     * @param hash to search
+     * @param id to search
      * @param username new username
      * @return the id of the modified row if success else an error
      */
-    pub fn update_username(hash: &String, username: &String) -> Result<i32, rusqlite::Error> {
+    pub fn update_username(id: &String, username: &String) -> Result<i32, rusqlite::Error> {
         let conn = rusqlite::Connection::open("rori.db").unwrap();
-        let mut stmt = conn.prepare("UPDATE devices SET username=:username WHERE hash=:hash").unwrap();
-        stmt.execute_named(&[(":hash", hash), (":username", username)])
+        let mut stmt = conn.prepare("UPDATE devices SET username=:username WHERE id=:id").unwrap();
+        stmt.execute_named(&[(":id", id), (":username", username)])
     }
 }
