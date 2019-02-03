@@ -25,6 +25,10 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  **/
 
+use serde::ser::{Serialize, SerializeStruct};
+use serde::Serializer;
+use std::fmt;
+
 /**
  * Represent a RORI device
  * A device for RORI is a ring_id. This device can be linked to a specific user or to the anonymous
@@ -50,6 +54,32 @@ impl Device {
             ring_id: ring_id.clone(),
             is_bridge: false
         }
+    }
+}
+
+/**
+ * Used for serde_json
+ */
+impl Serialize for Device {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where S: Serializer
+    {
+        // 4 is the number of fields in the struct.
+        let mut state = serializer.serialize_struct("Device", 4)?;
+        state.serialize_field("id", &self.id).unwrap();
+        state.serialize_field("name", &self.name).unwrap();
+        state.serialize_field("ring_id", &self.ring_id).unwrap();
+        state.serialize_field("is_bridge", &self.is_bridge).unwrap();
+        state.end()
+    }
+}
+
+// Used for println!
+impl fmt::Display for Device {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{} ({})",
+            self.ring_id, self.name
+        )
     }
 }
 

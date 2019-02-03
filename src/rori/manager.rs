@@ -31,6 +31,7 @@ use rori::account::Account;
 use rori::database::Database;
 use rori::interaction::Interaction;
 use rori::server::Server;
+use rori::user::Device;
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
@@ -294,8 +295,9 @@ impl Manager {
                 }
             }
         };
+        // NOTE: for now the device is not recognized. Will be determined in server.rs
         let interaction = Interaction {
-            author_ring_id: author_ring_id,
+            device_author: Device::new(&-1, &author_ring_id),
             body: body,
             metadatas: metadatas,
             datatype: datatype,

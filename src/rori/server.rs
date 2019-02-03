@@ -120,12 +120,13 @@ impl Server {
     pub fn handle_interaction(&mut self, interaction: Interaction) {
         // Find linked device
         let mut username = String::new();
-        let is_bridge = Database::is_bridge(&interaction.author_ring_id);
+        let hash = interaction.device_author.ring_id.clone();
+        let is_bridge = Database::is_bridge(&hash);
 
         if !is_bridge {
             let mut user_found = false;
             for device in &self.anonymous_user.devices {
-                if &*interaction.author_ring_id == &*device.ring_id {
+                if &*hash == &*device.ring_id {
                     user_found = true;
                     break;
                 }
@@ -134,7 +135,7 @@ impl Server {
                 // User not found, continue to search.
                 for mut registered in &self.registered_users {
                     for device in &registered.devices {
-                        if &*interaction.author_ring_id == &*device.ring_id {
+                        if &*hash == &*device.ring_id {
                             user_found = true;
                             username = registered.name.clone();
                             break;
@@ -144,8 +145,8 @@ impl Server {
             }
             if !user_found {
                 // User not found add it
-                self.add_contact(&*self.account.id, &*interaction.author_ring_id);
-                self.add_new_anonymous_device(&interaction.author_ring_id);
+                self.add_contact(&*self.account.id, &*hash);
+                self.add_new_anonymous_device(&hash);
             }
         } else {
             let sub_author = match interaction.metadatas.get("sa") {
@@ -155,7 +156,23 @@ impl Server {
             if sub_author.len() > 0 {
                 username = sub_author;
             }
+
+            if !Database::is_bridge_with_username(&hash, &username) {
+                warn!("{} is trying to talk for another user", hash);
+                self.send_interaction(&*self.account.id, &hash,
+                    &*format!("{{\"registered\":false, \"username\":\"{}\", \"err\":\"{} is not yours\"}}", username, username), "rori/message");
+                return;
+            }
         }
+
+        let tuple = Database::get_device(&hash, &username);
+        let mut new_interaction = interaction.clone();
+        new_interaction.device_author = Device {
+            id: tuple.0,
+            name: tuple.3,
+            ring_id: tuple.1,
+            is_bridge: tuple.4 == 1
+        };
 
         // TODO should be handle by a module
         if interaction.datatype == "rori/command" {
@@ -167,7 +184,7 @@ impl Server {
                         warn!("register received, but no username detected");
                         return;
                     }
-                    self.try_register_username(&interaction.author_ring_id,
+                    self.try_register_username(&hash,
                                                &String::from(*split.get(1).unwrap()));
                 }
             } else {
@@ -179,28 +196,28 @@ impl Server {
                        warn!("add_device received, but no device detected");
                        return;
                    }
-                   let mut device_to_add = interaction.author_ring_id.clone();
+                   let mut device_to_add = hash.clone();
                    if split.len() == 3 && split.last().unwrap_or(&"").len() > 0 {
                        device_to_add = split.last().unwrap_or(&"").to_string();
                    }
-                   self.try_register_device(&interaction.author_ring_id, &device_to_add, &username,
+                   self.try_register_device(&hash, &device_to_add, &username,
                                             &String::from(*split.get(1).unwrap()));
                 } else if interaction.body.starts_with("/rm_device") {
                     // User wants to revoke a device
                     // /rm_device name (ring_id)
-                    let mut device_to_remove = interaction.author_ring_id.clone();
+                    let mut device_to_remove = hash.clone();
                     let split: Vec<&str> = interaction.body.split(' ').collect();
                     if split.len() == 2 && split.last().unwrap_or(&"").len() > 0 {
                         device_to_remove = split.last().unwrap_or(&"").to_string();
                     }
-                    self.try_remove_device(&interaction.author_ring_id, &device_to_remove, &username);
+                    self.try_remove_device(&hash, &device_to_remove, &username);
                 } else if interaction.body.starts_with("/unregister") {
                     // User wants to unregister
-                    self.try_unregister(&interaction.author_ring_id, &username);
+                    self.try_unregister(&hash, &username);
                 }
             }
 
-            let device = Database::get_device(&interaction.author_ring_id, &username);
+            let device = Database::get_device(&hash, &username);
 
             if interaction.body.starts_with("/add_types") {
                 // Handle add_type
@@ -227,14 +244,13 @@ impl Server {
                     warn!("link received, but no argument detected");
                     return;
                 }
-                self.try_link_new_device(&interaction.author_ring_id,
-                                         &String::from(*split.get(1).unwrap()));
+                self.try_link_new_device(&hash,
+                                         &String::from(*split.get(1).unwrap()), &username);
             }
 
         }
 
-
-        let mm = ModuleManager::new(interaction);
+        let mm = ModuleManager::new(new_interaction);
         mm.process();
     }
 
@@ -331,23 +347,37 @@ impl Server {
     /**
      * Move the anonymous device to a registered user
      * @param self
-     * @param ring_id to move (must be in anonymous)
+     * @param hash to move (must be in anonymous)
      * @param username new device username
      */
-    fn move_ring_to_user(&mut self, ring_id: &String, username: &String) {
-        // TODO REDO THIS
-        /*
-        // Remove from anonymous_user
-        let index = self.anonymous_user.devices.iter().position(|d| d.ring_id == *ring_id).unwrap();
-        self.anonymous_user.devices.remove(index);
+    fn move_ring_to_user(&mut self, hash: &String, username: &String) {
+        let is_bridge = Database::is_bridge(hash);
+        let did : i32;
+        if is_bridge {
+            let insert_into_db = Database::insert_new_device(hash, username, &String::new(), true);
+            match insert_into_db {
+                Ok(i) => {
+                    did = i;
+                }
+                _ => {
+                    error!("move_ring_to_user failed");
+                    return;
+                }
+            }
+        } else {
+            // Remove from anonymous_user
+            let index = self.anonymous_user.devices.iter().position(|d| d.ring_id == *hash).unwrap();
+            did = self.anonymous_user.devices.get(index).unwrap().id;
+            self.anonymous_user.devices.remove(index);
+        }
         // Update device for user
         for registered in &mut self.registered_users {
             if registered.name == *username {
-                registered.devices.push(Device::new(ring_id));
+                registered.devices.push(Device::new(&did, hash));
             }
         }
         // Update database
-        let _ = Database::update_username(ring_id, username);*/
+        let _ = Database::update_username(&did.to_string(), username);
     }
 
     /**
@@ -373,31 +403,44 @@ impl Server {
      * @param self
      * @param from_id the sender of the order
      * @param argument the ring_id if registered, the username if not
+     * @param username the username if bridge
      */
-    fn try_link_new_device(&mut self, from_id: &String, argument: &String) {
-        // TODO, is it safe???
-        /*
+    fn try_link_new_device(&mut self, from_id: &String, argument: &String, username: &String) {
         // Retrieve users from database
-        // TODO inform user that a new device is linked?
-        let (from_id, from_user, _) = Database::get_device(from_id);
+        let id = self.account.id.clone();
+        let is_bridge = Database::is_bridge(&from_id);
+        let hash : String;
+        let from_user : String;
+        if is_bridge {
+            let tuple = Database::get_device(&from_id, username);
+            hash = tuple.1;
+            from_user = tuple.2;
+        } else {
+            let tuple = Database::get_devices_for_hash(&from_id).get(0).unwrap().clone();
+            hash = tuple.1;
+            from_user = tuple.2;
+        }
+
+        // TODO inform user that a new device is linked
         let mut do_push = true; // if we must store a temporary item to remember the order
         let mut do_clean = false; // user linked, the temporary item is not necessary anymore
         let linked_id : String;
         let linked_user : String;
         if from_user.len() == 0 {
-            linked_id = from_id.clone();
+            linked_id = hash;
             linked_user = argument.clone();
+
             // unknown want to be connected as user.
-            for (id, account, authentified) in self.id_to_account_linker.clone() {
-                if id == from_id && account == *argument {
+            for (hash, account, authentified) in self.id_to_account_linker.clone() {
+                if hash == *from_id && account == *argument {
                     do_push = false; // already here
                     if authentified {
                         // Do link and inform users
                         do_clean = true;
                         let msg = format!("{} linked to {}", from_id, argument);
                         info!("{}", msg);
-                        self.move_ring_to_user(&id, &account);
-                        self.send_interaction(&*id, &*from_id, &*format!("{{\"registered\":true, \"username\":\"{}\"}}", argument), "rori/message");
+                        self.move_ring_to_user(&hash, &account);
+                        self.send_interaction(&*id, &*hash, &*format!("{{\"registered\":true, \"username\":\"{}\"}}", argument), "rori/message");
                         break;
                     }
                 }
@@ -406,16 +449,16 @@ impl Server {
             linked_id = argument.clone();
             linked_user = from_user.clone();
             // known user want a new device
-            for (id, account, authentified) in self.id_to_account_linker.clone() {
-                if id == *argument && account == from_user {
+            for (hash, account, authentified) in self.id_to_account_linker.clone() {
+                if hash == *argument && account == from_user {
                     do_push = false; // already here
                     if !authentified {
                         // Do link
                         do_clean = true;
                         let msg = format!("{} linked to {}", argument, from_user);
                         info!("{}", msg);
-                        self.move_ring_to_user(&id, &account);
-                        self.send_interaction(&*id, &*from_id, &*format!("{{\"registered\":true, \"username\":\"{}\"}}", from_user), "rori/message");
+                        self.move_ring_to_user(&hash, &account);
+                        self.send_interaction(&*id, &*hash, &*format!("{{\"registered\":true, \"username\":\"{}\"}}", from_user), "rori/message");
                         break;
                     }
                 }
@@ -433,7 +476,6 @@ impl Server {
                 self.id_to_account_linker.remove(index);
             }
         }
-        */
     }
 
     /**
@@ -613,10 +655,6 @@ impl Server {
         let is_bridge = Database::is_bridge(hash);
         if is_bridge {
             name = username.clone();
-            if !Database::is_bridge_with_username(hash, username) {
-                warn!("{} is trying to unregister another user", hash);
-                return;
-            }
         } else {
             // Search username
             for registered in &mut self.registered_users {

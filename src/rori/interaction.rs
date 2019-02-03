@@ -25,6 +25,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  **/
 
+use rori::user::Device;
 use std::collections::HashMap;
 use serde::ser::{Serialize, SerializeStruct};
 use serde::Serializer;
@@ -38,7 +39,7 @@ use time::Tm;
 #[derive(Clone)]
 pub struct Interaction
 {
-    pub author_ring_id: String,
+    pub device_author: Device,
     pub body: String,
     pub datatype: String,
     pub metadatas: HashMap<String, String>,
@@ -49,7 +50,7 @@ pub struct Interaction
 impl fmt::Display for Interaction {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{} ({};{:?}): {}",
-            self.author_ring_id, self.datatype, self.metadatas, self.body
+            self.device_author, self.datatype, self.metadatas, self.body
         )
     }
 }
@@ -63,7 +64,7 @@ impl Serialize for Interaction {
     {
         // 5 is the number of fields in the struct.
         let mut state = serializer.serialize_struct("Interaction", 5)?;
-        state.serialize_field("author_ring_id", &self.author_ring_id).unwrap();
+        state.serialize_field("device_author", &self.device_author).unwrap();
         state.serialize_field("body", &self.body).unwrap();
         state.serialize_field("metadatas", &self.metadatas).unwrap();
         state.serialize_field("body", &self.body).unwrap();
