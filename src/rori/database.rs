@@ -63,6 +63,7 @@ impl Database {
                 id               INTEGER PRIMARY KEY,
                 hash             TEXT,
                 username         TEXT,
+                sub_author       TEXT,
                 devicename       TEXT,
                 additional_types TEXT,
                 is_bridge        INTEGER
@@ -94,7 +95,7 @@ impl Database {
         let conn = rusqlite::Connection::open("rori.db").unwrap();
         let mut stmt = conn.prepare("SELECT additional_types FROM devices WHERE hash=:hash AND is_bridge=1").unwrap();
         let mut rows = stmt.query_named(&[(":hash", hash)]).unwrap();
-        if let Some(row) = rows.next() {
+        if let Some(_) = rows.next() {
             return true;
         }
         false
@@ -104,7 +105,7 @@ impl Database {
         let conn = rusqlite::Connection::open("rori.db").unwrap();
         let mut stmt = conn.prepare("SELECT additional_types FROM devices WHERE hash=:hash AND username=:username AND is_bridge=1").unwrap();
         let mut rows = stmt.query_named(&[(":hash", hash), (":username", username)]).unwrap();
-        if let Some(row) = rows.next() {
+        if let Some(_) = rows.next() {
             return true;
         }
         false
@@ -362,6 +363,43 @@ impl Database {
     }
 
     /**
+     * get sub_author via it's id
+     * @param hash of the device
+     * @param sub_author of the device
+     * @return String linked
+     */
+    pub fn sub_author(hash: &String, sub_author: &String) -> String {
+        let conn = rusqlite::Connection::open("rori.db").unwrap();
+        let mut stmt = conn.prepare("SELECT username FROM devices WHERE hash=:hash AND sub_author=:sub_author").unwrap();
+        let mut rows = stmt.query_named(&[(":hash", hash), (":sub_author", sub_author)]).unwrap();
+        if let Some(row) = rows.next() {
+            let row = row.unwrap();
+            let username : String = row.get(0);
+            return username;
+        }
+        String::new()
+    }
+
+    /**
+     * get sub_author_id via it's userne
+     * @param hash of the device
+     * @param sub_author of the device
+     * @return String linked
+     */
+    pub fn sub_author_id(hash: &String, username: &String) -> String {
+        let conn = rusqlite::Connection::open("rori.db").unwrap();
+        let mut stmt = conn.prepare("SELECT sub_author FROM devices WHERE hash=:hash AND username=:username").unwrap();
+        let mut rows = stmt.query_named(&[(":hash", hash), (":username", username)]).unwrap();
+        if let Some(row) = rows.next() {
+            let row = row.unwrap();
+            let sub_author : String = row.get(0);
+            return sub_author;
+        }
+        String::new()
+    }
+
+
+    /**
      * Update a devicename
      * @param id to search
      * @param devicename new devicename
@@ -371,6 +409,18 @@ impl Database {
         let conn = rusqlite::Connection::open("rori.db").unwrap();
         let mut stmt = conn.prepare("UPDATE devices SET devicename=:devicename WHERE id=:id").unwrap();
         stmt.execute_named(&[(":id", id), (":devicename", devicename)])
+    }
+
+    /**
+     * Set sub_author for a device
+     * @param id of the device to modify
+     * @param sub_author to set
+     * @return if success
+     */
+    pub fn update_sub_author(id: &i32, sub_author: &String) -> Result<i32, rusqlite::Error> {
+        let conn = rusqlite::Connection::open("rori.db").unwrap();
+        let mut stmt = conn.prepare("UPDATE devices SET sub_author=:sub_author WHERE id=:id").unwrap();
+        stmt.execute_named(&[(":id", id), (":sub_author", sub_author)])
     }
 
     /**
