@@ -27,6 +27,8 @@
 
 use rori::module::*;
 use rusqlite;
+use std::error::Error;
+use string_error::static_err;
 
 /**
  * This class furnish helpers to manipulate the rori.db sqlite database
@@ -161,16 +163,33 @@ impl Database {
      * @param devicename device's name related
      * @return the line's id inserted if success, else an error
      */
-    pub fn insert_new_device(hash: &String, username: &String, devicename: &String, is_bridge: bool) -> Result<i32, rusqlite::Error> {
+    pub fn insert_new_device(hash: &String, username: &String, devicename: &String, is_bridge: bool) -> Result<i32, Box<Error>> {
         let conn = rusqlite::Connection::open("rori.db").unwrap();
-        let mut conn = conn.prepare("INSERT INTO devices (hash, username, devicename, additional_types, is_bridge)
-                                     VALUES (:hash, :username, :devicename, \"\", :is_bridge)").unwrap();
+
+        // If already exists
+        if is_bridge {
+            let mut stmt = conn.prepare("SELECT id FROM devices WHERE hash=:hash AND username=:username AND devicename=:devicename").unwrap();
+            let mut rows = stmt.query_named(&[(":hash", hash), (":username", username), (":devicename", devicename)]).unwrap();
+            while let Some(_) = rows.next() {
+                return Err(static_err("Device already inserted"));
+            }
+        } else {
+            let mut stmt = conn.prepare("SELECT id FROM devices WHERE hash=:hash").unwrap();
+            let mut rows = stmt.query_named(&[(":hash", hash)]).unwrap();
+            while let Some(_) = rows.next() {
+                return Err(static_err("Device already inserted"));
+            }
+        }
+
+        // Else insert!
+        let mut conn = conn.prepare("INSERT INTO devices (hash, username, sub_author, devicename, additional_types, is_bridge)
+                                     VALUES (:hash, :username, \"\", :devicename, \"\", :is_bridge)").unwrap();
         match conn.execute_named(&[(":hash", hash), (":username", username), (":devicename", devicename), (":is_bridge", &is_bridge)]) {
             Ok(_) => {
                 return Ok(Database::get_device(hash, username).0);
             }
             Err(e) => {
-                return Err(e);
+                return Err(Box::new(e));
             }
         }
     }
@@ -245,7 +264,7 @@ impl Database {
         let conn = rusqlite::Connection::open("rori.db").unwrap();
         let mut stmt = conn.prepare("SELECT id, hash, username, devicename, is_bridge FROM devices \
             WHERE hash=:hash").unwrap();
-       let mut rows = stmt.query_named(&[(":hash", &hash.to_string())]).unwrap();
+        let mut rows = stmt.query_named(&[(":hash", &hash.to_string())]).unwrap();
         while let Some(row) = rows.next() {
             let row = row.unwrap();
             devices.push((row.get(0), row.get(1), row.get(2), row.get(3), row.get(4)));
@@ -263,7 +282,7 @@ impl Database {
         let conn = rusqlite::Connection::open("rori.db").unwrap();
         let mut stmt = conn.prepare("SELECT id, hash, username, devicename, is_bridge FROM devices \
             WHERE username=:username").unwrap();
-       let mut rows = stmt.query_named(&[(":username", &username.to_string())]).unwrap();
+        let mut rows = stmt.query_named(&[(":username", &username.to_string())]).unwrap();
         while let Some(row) = rows.next() {
             let row = row.unwrap();
             devices.push((row.get(0), row.get(1), row.get(2), row.get(3), row.get(4)));
@@ -405,7 +424,7 @@ impl Database {
      * @param devicename new devicename
      * @return the id of the modified row if success else an error
      */
-    pub fn update_devicename(id: &String, devicename: &String) -> Result<i32, rusqlite::Error> {
+    pub fn update_devicename(id: &i32, devicename: &String) -> Result<i32, rusqlite::Error> {
         let conn = rusqlite::Connection::open("rori.db").unwrap();
         let mut stmt = conn.prepare("UPDATE devices SET devicename=:devicename WHERE id=:id").unwrap();
         stmt.execute_named(&[(":id", id), (":devicename", devicename)])
@@ -429,7 +448,7 @@ impl Database {
      * @param username new username
      * @return the id of the modified row if success else an error
      */
-    pub fn update_username(id: &String, username: &String) -> Result<i32, rusqlite::Error> {
+    pub fn update_username(id: &i32, username: &String) -> Result<i32, rusqlite::Error> {
         let conn = rusqlite::Connection::open("rori.db").unwrap();
         let mut stmt = conn.prepare("UPDATE devices SET username=:username WHERE id=:id").unwrap();
         stmt.execute_named(&[(":id", id), (":username", username)])

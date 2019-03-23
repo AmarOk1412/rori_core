@@ -16,10 +16,7 @@ before_install:
   - git submodule update --init --recursive
 install:
   - sudo apt-get install -f -y libdbus-1-dev openssl
-  - |
-    if [[ "$TRAVIS_RUST_VERSION" == nightly ]]; then
-      RUSTFLAGS="--cfg procmacro2_semver_exempt" cargo install cargo-tarpaulin
-    fi
+  - RUSTFLAGS="--cfg procmacro2_semver_exempt" cargo install cargo-tarpaulin
   - rustc -V
 before_script:
   - "export DISPLAY=:99.0"
@@ -29,8 +26,4 @@ script:
   - cargo build
   - make test_keys
   - RUST_TEST_THREADS=1 cargo test -- --nocapture
-  - |
-    # tarpaulin deps
-    if [[ "$TRAVIS_RUST_VERSION" == nightly ]]; then
-      cargo tarpaulin --ciserver travis-ci --coveralls $TRAVIS_JOB_ID;
-    fi
+  - cargo tarpaulin --ciserver travis-ci --coveralls $TRAVIS_JOB_ID;

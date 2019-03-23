@@ -5,13 +5,13 @@ extern crate reqwest;
 extern crate time;
 
 mod mocks;
-
 #[cfg(test)]
 mod tests_api {
     use core::rori::api::API;
     use core::rori::database::Database;
     use core::rori::interaction::Interaction;
     use core::rori::manager::Manager;
+    use core::rori::user::Device;
     use mocks::Daemon;
     use reqwest;
     use serde_json::{Value, from_str};
@@ -48,14 +48,24 @@ mod tests_api {
         let _ = thread::spawn(move|| {
             let m = Arc::new(Mutex::new(Manager::init("GLaDOs_id").unwrap()));
             m.lock().unwrap().server.handle_interaction(Interaction {
-                author_ring_id: String::from("Weasley"),
+                device_author: Device {
+                    id: 0,
+                    name: String::new(),
+                    ring_id: String::from("Weasley"),
+                    is_bridge: false
+                },
                 body: String::from("/register weasley"),
                 datatype: String::from("rori/command"),
                 time: time::now(),
                 metadatas: HashMap::new()
             });
             m.lock().unwrap().server.handle_interaction(Interaction {
-                author_ring_id: String::from("Weasley"),
+                device_author: Device {
+                    id: 0,
+                    name: String::new(),
+                    ring_id: String::from("Weasley"),
+                    is_bridge: false
+                },
                 body: String::from("/add_device core"),
                 datatype: String::from("rori/command"),
                 time: time::now(),
@@ -83,7 +93,7 @@ mod tests_api {
         let _ = res.read_to_string(&mut body);
         let v: Value = from_str(&body).unwrap();
         assert!(v["name"] == "rori");
-        assert!(v["addr"] == "0xGLaDOs_ring_id");
+        assert!(v["addr"] == "0xGLaDOs_hash");
 
         let mut res = match client.get("https://127.0.0.1:1412/name/weasley").send() {
             Ok(res) => res,
@@ -139,7 +149,12 @@ mod tests_api {
         let _ = thread::spawn(move|| {
             let m = Arc::new(Mutex::new(Manager::init("GLaDOs_id").unwrap()));
             m.lock().unwrap().server.handle_interaction(Interaction {
-                author_ring_id: String::from("weasley_id"),
+                device_author: Device {
+                    id: 0,
+                    name: String::new(),
+                    ring_id: String::from("weasley_id"),
+                    is_bridge: false
+                },
                 body: String::from("/register weasley"),
                 datatype: String::from("rori/command"),
                 time: time::now(),

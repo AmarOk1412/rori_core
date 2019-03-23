@@ -25,7 +25,7 @@ mod tests_server {
         Database::init_db();
         let account = Account {
             id: String::from("GLaDOs_id"),
-            ring_id: String::from("GLaDOs_ring_id"),
+            ring_id: String::from("GLaDOs_hash"),
             alias: String::from("GLaDOs_alias"),
             enabled: true,
         };
@@ -51,14 +51,19 @@ mod tests_server {
     #[test]
     fn test_formatted_interaction() {
         let interaction = Interaction {
-            author_ring_id: String::from("Tars_id"),
+            device_author: Device {
+                id: 0,
+                name: String::new(),
+                ring_id: String::from("Tars_id"),
+                is_bridge: false
+            },
             body: String::from("My joke percentage is at 70%!"),
             datatype: String::from("text/plain"),
             time: time::now(),
             metadatas: HashMap::new(),
         };
         let formatted_account = format!("{}", interaction);
-        assert!(formatted_account == format!("{} ({};{:?}): {}", interaction.author_ring_id, interaction.datatype, interaction.metadatas, interaction.body));
+        assert!(formatted_account == format!("{} ({};{:?}): {}", interaction.device_author, interaction.datatype, interaction.metadatas, interaction.body));
     }
 
     #[test]
@@ -74,10 +79,10 @@ mod tests_server {
         let ok = server.add_new_anonymous_device(&String::from("Atlas"));
         assert!(ok);
         // Device can be retrieven
-        let device = Database::get_device(&String::from("PBody"));
-        assert!(device.0 == "PBody");
-        assert!(device.1 == "");
+        let device = Database::get_device(&String::from("PBody"), &String::new());
+        assert!(device.1 == "PBody");
         assert!(device.2 == "");
+        assert!(device.3 == "");
         // Anonymous user should contains 2 devices
         assert!(server.anonymous_user.devices.len() == 2);
         // Retrieve all devices and no more
@@ -103,44 +108,60 @@ mod tests_server {
             Daemon::run(cloned_daemon);
         });
         let mut anonymous = User::new();
-        anonymous.devices.push(Device::new(&String::from("Tars_id")));
+        anonymous.devices.push(Device::new(&0, &String::from("Tars_id")));
         let mut server = setup(anonymous, Vec::new());
         assert!(server.anonymous_user.devices.len() == 1);
-        let _ = Database::insert_new_device(&String::from("Tars_id"), &String::new(), &String::new());
+        let did = Database::insert_new_device(&String::from("Tars_id"), &String::new(), &String::new(), false);
+        let did = did.ok().unwrap();
 
         // Tars_id do a /add_types without datatypes
         server.handle_interaction(Interaction {
-            author_ring_id: String::from("Tars_id"),
+            device_author: Device {
+                id: 0,
+                name: String::new(),
+                ring_id: String::from("Tars_id"),
+                is_bridge: false
+            },
             body: String::from("/add_types"),
             datatype: String::from("rori/command"),
             time: time::now(),
             metadatas: HashMap::new(),
         });
-        let dt = Database::get_datatypes(&String::from("Tars_id"));
+        let dt = Database::get_datatypes(&did.clone());
         assert!(dt.len() == 0);
 
         // Tars_id do a /add_types with 2 datatypes
         server.handle_interaction(Interaction {
-            author_ring_id: String::from("Tars_id"),
+            device_author: Device {
+                id: 0,
+                name: String::new(),
+                ring_id: String::from("Tars_id"),
+                is_bridge: false
+            },
             body: String::from("/add_types music command"),
             datatype: String::from("rori/command"),
             time: time::now(),
             metadatas: HashMap::new(),
         });
-        let dt = Database::get_datatypes(&String::from("Tars_id"));
+        let dt = Database::get_datatypes(&did.clone());
         assert!(dt.len() == 2);
         assert!(dt.first().unwrap() == "music");
         assert!(dt.last().unwrap() == "command");
 
         // Tars_id do a /add_types with 1 already set and 1 not set
         server.handle_interaction(Interaction {
-            author_ring_id: String::from("Tars_id"),
+            device_author: Device {
+                id: 0,
+                name: String::new(),
+                ring_id: String::from("Tars_id"),
+                is_bridge: false
+            },
             body: String::from("/add_types music other"),
             datatype: String::from("rori/command"),
             time: time::now(),
             metadatas: HashMap::new(),
         });
-        let dt = Database::get_datatypes(&String::from("Tars_id"));
+        let dt = Database::get_datatypes(&did);
         assert!(dt.len() == 3);
         assert!(dt.last().unwrap() == "other");
 
@@ -160,65 +181,90 @@ mod tests_server {
             Daemon::run(cloned_daemon);
         });
         let mut anonymous = User::new();
-        anonymous.devices.push(Device::new(&String::from("Tars_id")));
+        anonymous.devices.push(Device::new(&0, &String::from("Tars_id")));
         let mut server = setup(anonymous, Vec::new());
         assert!(server.anonymous_user.devices.len() == 1);
-        let _ = Database::insert_new_device(&String::from("Tars_id"), &String::new(), &String::new());
+        let _ = Database::insert_new_device(&String::from("Tars_id"), &String::new(), &String::new(), false);
 
         // Tars_id do a /add_types with 3 datatypes
         server.handle_interaction(Interaction {
-            author_ring_id: String::from("Tars_id"),
+            device_author: Device {
+                id: 0,
+                name: String::new(),
+                ring_id: String::from("Tars_id"),
+                is_bridge: false
+            },
             body: String::from("/add_types music command other"),
             datatype: String::from("rori/command"),
             time: time::now(),
             metadatas: HashMap::new(),
         });
-        let dt = Database::get_datatypes(&String::from("Tars_id"));
+        let dt = Database::get_datatypes(&1);
         assert!(dt.len() == 3);
 
         // Tars_id do a /rm_types with nothing
         server.handle_interaction(Interaction {
-            author_ring_id: String::from("Tars_id"),
+            device_author: Device {
+                id: 0,
+                name: String::new(),
+                ring_id: String::from("Tars_id"),
+                is_bridge: false
+            },
             body: String::from("/rm_types"),
             datatype: String::from("rori/command"),
             time: time::now(),
             metadatas: HashMap::new(),
         });
-        let dt = Database::get_datatypes(&String::from("Tars_id"));
+        let dt = Database::get_datatypes(&1);
         assert!(dt.len() == 3);
 
         // Tars_id do a /rm_types with something not in types
         server.handle_interaction(Interaction {
-            author_ring_id: String::from("Tars_id"),
+            device_author: Device {
+                id: 0,
+                name: String::new(),
+                ring_id: String::from("Tars_id"),
+                is_bridge: false
+            },
             body: String::from("/rm_types nothing"),
             datatype: String::from("rori/command"),
             time: time::now(),
             metadatas: HashMap::new(),
         });
-        let dt = Database::get_datatypes(&String::from("Tars_id"));
+        let dt = Database::get_datatypes(&1);
         assert!(dt.len() == 3);
 
         // Tars_id do a /rm_types with something not in types and 2 in types
         server.handle_interaction(Interaction {
-            author_ring_id: String::from("Tars_id"),
+            device_author: Device {
+                id: 0,
+                name: String::new(),
+                ring_id: String::from("Tars_id"),
+                is_bridge: false
+            },
             body: String::from("/rm_types nothing music command"),
             datatype: String::from("rori/command"),
             time: time::now(),
             metadatas: HashMap::new(),
         });
-        let dt = Database::get_datatypes(&String::from("Tars_id"));
+        let dt = Database::get_datatypes(&1);
         assert!(dt.len() == 1);
         assert!(dt.first().unwrap() == "other");
 
         // Tars_id do a /rm_types with last one
         server.handle_interaction(Interaction {
-            author_ring_id: String::from("Tars_id"),
+            device_author: Device {
+                id: 0,
+                name: String::new(),
+                ring_id: String::from("Tars_id"),
+                is_bridge: false
+            },
             body: String::from("/rm_types other"),
             datatype: String::from("rori/command"),
             time: time::now(),
             metadatas: HashMap::new(),
         });
-        let dt = Database::get_datatypes(&String::from("Tars_id"));
+        let dt = Database::get_datatypes(&1);
         assert!(dt.len() == 0);
 
         teardown();
@@ -236,44 +282,59 @@ mod tests_server {
             Daemon::run(cloned_daemon);
         });
         let mut anonymous = User::new();
-        anonymous.devices.push(Device::new(&String::from("Tars_id")));
+        anonymous.devices.push(Device::new(&0, &String::from("Tars_id")));
         let mut server = setup(anonymous, Vec::new());
         assert!(server.anonymous_user.devices.len() == 1);
-        let _ = Database::insert_new_device(&String::from("Tars_id"), &String::new(), &String::new());
+        let _ = Database::insert_new_device(&String::from("Tars_id"), &String::new(), &String::new(), false);
 
         // Tars_id do a /add_types with 3 datatypes
         server.handle_interaction(Interaction {
-            author_ring_id: String::from("Tars_id"),
+            device_author: Device {
+                id: 0,
+                name: String::new(),
+                ring_id: String::from("Tars_id"),
+                is_bridge: false
+            },
             body: String::from("/add_types music command other"),
             datatype: String::from("rori/command"),
             time: time::now(),
             metadatas: HashMap::new(),
         });
-        let dt = Database::get_datatypes(&String::from("Tars_id"));
+        let dt = Database::get_datatypes(&1);
         assert!(dt.len() == 3);
 
         // Tars_id do a /set_types with two types
         server.handle_interaction(Interaction {
-            author_ring_id: String::from("Tars_id"),
+            device_author: Device {
+                id: 0,
+                name: String::new(),
+                ring_id: String::from("Tars_id"),
+                is_bridge: false
+            },
             body: String::from("/set_types type1 type2"),
             datatype: String::from("rori/command"),
             time: time::now(),
             metadatas: HashMap::new(),
         });
-        let dt = Database::get_datatypes(&String::from("Tars_id"));
+        let dt = Database::get_datatypes(&1);
         assert!(dt.len() == 2);
         assert!(dt.first().unwrap() == "type1");
         assert!(dt.last().unwrap() == "type2");
 
         // Tars_id do a /set_types with nothing
         server.handle_interaction(Interaction {
-            author_ring_id: String::from("Tars_id"),
+            device_author: Device {
+                id: 0,
+                name: String::new(),
+                ring_id: String::from("Tars_id"),
+                is_bridge: false
+            },
             body: String::from("/set_types "),
             datatype: String::from("rori/command"),
             time: time::now(),
             metadatas: HashMap::new(),
         });
-        let dt = Database::get_datatypes(&String::from("Tars_id"));
+        let dt = Database::get_datatypes(&1);
         assert!(dt.len() == 0);
 
         teardown();
@@ -284,34 +345,34 @@ mod tests_server {
 
     #[test]
     // Scenario:
-    // 1. Someone try to get some ring_id from devicenames or usernames
-    fn server_get_ring_id() {
+    // 1. Someone try to get some hash from devicenames or usernames
+    fn server_get_hash() {
         let mut registered = User::new();
         registered.name = String::from("PBody");
-        let mut pbody = Device::new(&String::from("PBody_id"));
+        let mut pbody = Device::new(&0, &String::from("PBody_id"));
         pbody.name = String::from("device");
         registered.devices.push(pbody);
         let mut users = Vec::new();
         users.push(registered);
         let mut server = setup(User::new(), users);
         // RORI reserved
-        let ring_id = server.get_ring_id(&String::from("RORI"));
-        assert!(ring_id == "GLaDOs_ring_id");
-        let ring_id = server.get_ring_id(&String::from("Rori"));
-        assert!(ring_id == "GLaDOs_ring_id");
-        let ring_id = server.get_ring_id(&String::from("ROri"));
-        assert!(ring_id == "GLaDOs_ring_id");
-        let ring_id = server.get_ring_id(&String::from("rori"));
-        assert!(ring_id == "GLaDOs_ring_id");
+        let hash = server.get_hash(&String::from("RORI"));
+        assert!(hash == "GLaDOs_hash");
+        let hash = server.get_hash(&String::from("Rori"));
+        assert!(hash == "GLaDOs_hash");
+        let hash = server.get_hash(&String::from("ROri"));
+        assert!(hash == "GLaDOs_hash");
+        let hash = server.get_hash(&String::from("rori"));
+        assert!(hash == "GLaDOs_hash");
         // Search user
-        let ring_id = server.get_ring_id(&String::from("PBody"));
-        assert!(ring_id == "PBody_id");
+        let hash = server.get_hash(&String::from("PBody"));
+        assert!(hash == "PBody_id");
         // Search device
-        let ring_id = server.get_ring_id(&String::from("PBody_device"));
-        assert!(ring_id == "PBody_id");
+        let hash = server.get_hash(&String::from("PBody_device"));
+        assert!(hash == "PBody_id");
         // Not here
-        let ring_id = server.get_ring_id(&String::from("Atlas"));
-        assert!(ring_id.len() == 0);
+        let hash = server.get_hash(&String::from("Atlas"));
+        assert!(hash.len() == 0);
         teardown();
     }
 
@@ -323,13 +384,13 @@ mod tests_server {
         // load_devices
         let mut devices = Vec::new();
         // anonymous user
-        devices.push((String::from("GLaDOs"), String::from(""), String::from("")));
-        devices.push((String::from("PBOdy"), String::from(""), String::from("")));
+        devices.push((0, String::from("GLaDOs"), String::from(""), String::from(""), false));
+        devices.push((1, String::from("PBOdy"), String::from(""), String::from(""), false));
         // Create new user
-        devices.push((String::from("Alexa"), String::from("Alexa"), String::from("Alexa")));
-        devices.push((String::from("Home"), String::from("Home"), String::from("Home")));
+        devices.push((2, String::from("Alexa"), String::from("Alexa"), String::from("Alexa"), false));
+        devices.push((3, String::from("Home"), String::from("Home"), String::from("Home"), false));
         // Add to known
-        devices.push((String::from("Tars"), String::from("Alexa"), String::from("Tars")));
+        devices.push((4, String::from("Tars"), String::from("Alexa"), String::from("Tars"), false));
         server.load_devices(devices);
         // anonymous should containe 2 devices
         assert!(server.anonymous_user.devices.len() == 2);
@@ -366,7 +427,12 @@ mod tests_server {
         let mut server = setup(User::new(), Vec::new());
         // handle interaction from unknown device
         server.handle_interaction(Interaction {
-            author_ring_id: String::from("Tars_id"),
+            device_author: Device {
+                id: 0,
+                name: String::new(),
+                ring_id: String::from("Tars_id"),
+                is_bridge: false
+            },
             body: String::from("My joke percentage is at 70%!"),
             datatype: String::from("text/plain"),
             time: time::now(),
@@ -415,13 +481,18 @@ mod tests_server {
             Daemon::run(cloned_daemon);
         });
         let mut anonymous = User::new();
-        anonymous.devices.push(Device::new(&String::from("Tars_id")));
-        anonymous.devices.push(Device::new(&String::from("Bad_Tars_id")));
+        anonymous.devices.push(Device::new(&0, &String::from("Tars_id")));
+        anonymous.devices.push(Device::new(&1, &String::from("Bad_Tars_id")));
         let mut server = setup(anonymous, Vec::new());
         assert!(server.anonymous_user.devices.len() == 2);
         // Tars_id do a /register
         server.handle_interaction(Interaction {
-            author_ring_id: String::from("Tars_id"),
+            device_author: Device {
+                id: 0,
+                name: String::new(),
+                ring_id: String::from("Tars_id"),
+                is_bridge: false
+            },
             body: String::from("/register tars"),
             datatype: String::from("rori/command"),
             time: time::now(),
@@ -429,7 +500,12 @@ mod tests_server {
         });
         // And bad tars try to to the same thing
         server.handle_interaction(Interaction {
-            author_ring_id: String::from("Bad_Tars_id"),
+            device_author: Device {
+                id: 1,
+                name: String::new(),
+                ring_id: String::from("Bad_Tars_id"),
+                is_bridge: false
+            },
             body: String::from("/register tars"),
             datatype: String::from("rori/command"),
             time: time::now(),
@@ -474,12 +550,17 @@ mod tests_server {
             Daemon::run(cloned_daemon);
         });
         let mut anonymous = User::new();
-        anonymous.devices.push(Device::new(&String::from("Tars_id")));
+        anonymous.devices.push(Device::new(&0, &String::from("Tars_id")));
         let mut server = setup(anonymous, Vec::new());
         assert!(server.anonymous_user.devices.len() == 1);
         // Tars_id do a /register
         server.handle_interaction(Interaction {
-            author_ring_id: String::from("Tars_id"),
+            device_author: Device {
+                id: 0,
+                name: String::new(),
+                ring_id: String::from("Tars_id"),
+                is_bridge: false
+            },
             body: String::from("/register"),
             datatype: String::from("rori/command"),
             time: time::now(),
@@ -505,20 +586,26 @@ mod tests_server {
         });
         let mut tars = User::new();
         tars.name = String::from("Tars");
-        tars.devices.push(Device::new(&String::from("Tars_id")));
-        tars.devices.push(Device::new(&String::from("Tars_id2")));
+        tars.devices.push(Device::new(&1, &String::from("Tars_id")));
+        tars.devices.push(Device::new(&2, &String::from("Tars_id2")));
         let mut badtars = User::new();
         badtars.name = String::from("Tars_pc");
-        badtars.devices.push(Device::new(&String::from("Tars_pc")));
+        badtars.devices.push(Device::new(&3, &String::from("Tars_pc")));
         let mut users = Vec::new();
         users.push(tars);
         users.push(badtars);
         let mut server = setup(User::new(), users);
-
+        let _ = Database::insert_new_device(&String::from("Tars_id"), &String::from("Tars"), &String::from(""), false);
+        let _ = Database::insert_new_device(&String::from("Tars_id2"), &String::from("Tars"), &String::from(""), false);
 
         // Tars_id do a /add_device android (should succeed)
         server.handle_interaction(Interaction {
-            author_ring_id: String::from("Tars_id"),
+            device_author: Device {
+                id: 1,
+                name: String::from("Tars"),
+                ring_id: String::from("Tars_id"),
+                is_bridge: false
+            },
             body: String::from("/add_device android"),
             datatype: String::from("rori/command"),
             time: time::now(),
@@ -526,7 +613,12 @@ mod tests_server {
         });
         // Tars_id2 do a /add_device pc (should fails because of Tars_pc)
         server.handle_interaction(Interaction {
-            author_ring_id: String::from("Tars_id2"),
+            device_author: Device {
+                id: 2,
+                name: String::from("Tars"),
+                ring_id: String::from("Tars_id2"),
+                is_bridge: false
+            },
             body: String::from("/add_device pc"),
             datatype: String::from("rori/command"),
             time: time::now(),
@@ -582,22 +674,27 @@ mod tests_server {
         });
         let mut tars = User::new();
         tars.name = String::from("Tars");
-        tars.devices.push(Device::new(&String::from("Tars_id")));
-        tars.devices.push(Device::new(&String::from("Tars_id2")));
+        tars.devices.push(Device::new(&1, &String::from("Tars_id")));
+        tars.devices.push(Device::new(&2, &String::from("Tars_id2")));
         let mut badtars = User::new();
         badtars.name = String::from("Tars_pc");
-        badtars.devices.push(Device::new(&String::from("Tars_pc")));
+        badtars.devices.push(Device::new(&3, &String::from("Tars_pc")));
         let mut users = Vec::new();
         users.push(tars);
         users.push(badtars);
         let mut server = setup(User::new(), users);
-        let _ = Database::insert_new_device(&String::from("Tars_id"), &String::from("Tars"), &String::from(""));
-        let _ = Database::insert_new_device(&String::from("Tars_id1"), &String::from("Tars"), &String::from(""));
-        let _ = Database::insert_new_device(&String::from("Tars_pc"), &String::from("Tars_pc"), &String::from(""));
+        let _ = Database::insert_new_device(&String::from("Tars_id"), &String::from("Tars"), &String::from(""), false);
+        let _ = Database::insert_new_device(&String::from("Tars_id1"), &String::from("Tars"), &String::from(""), false);
+        let _ = Database::insert_new_device(&String::from("Tars_pc"), &String::from("Tars_pc"), &String::from(""), false);
 
         // Tars_pc do a /add_device pc of Tars_id (should fails because of it's someone else device)
         server.handle_interaction(Interaction {
-            author_ring_id: String::from("Tars_pc"),
+            device_author: Device {
+                id: 3,
+                name: String::new(),
+                ring_id: String::from("Tars_pc"),
+                is_bridge: false
+            },
             body: String::from("/add_device pc Tars_id"),
             datatype: String::from("rori/command"),
             time: time::now(),
@@ -651,14 +748,19 @@ mod tests_server {
         });
         let mut tars = User::new();
         tars.name = String::from("Tars");
-        tars.devices.push(Device::new(&String::from("Tars_id")));
+        tars.devices.push(Device::new(&0, &String::from("Tars_id")));
         let mut users = Vec::new();
         users.push(tars);
         let mut server = setup(User::new(), users);
 
         // Tars_id do a /add_device (should fails)
         server.handle_interaction(Interaction {
-            author_ring_id: String::from("Tars_id"),
+            device_author: Device {
+                id: 0,
+                name: String::new(),
+                ring_id: String::from("Tars_id"),
+                is_bridge: false
+            },
             body: String::from("/add_device"),
             datatype: String::from("rori/command"),
             time: time::now(),
@@ -696,20 +798,27 @@ mod tests_server {
         });
         let mut tars = User::new();
         tars.name = String::from("Tars");
-        tars.devices.push(Device::new(&String::from("Tars_id")));
-        tars.devices.push(Device::new(&String::from("Tars_id2")));
+        tars.devices.push(Device::new(&1, &String::from("Tars_id")));
+        tars.devices.push(Device::new(&2, &String::from("Tars_id2")));
         let mut badtars = User::new();
         badtars.name = String::from("Atlas");
-        badtars.devices.push(Device::new(&String::from("Atlas_id")));
+        badtars.devices.push(Device::new(&3, &String::from("Atlas_id")));
         let mut users = Vec::new();
         users.push(tars);
         users.push(badtars);
         let mut server = setup(User::new(), users);
-
+        let _ = Database::insert_new_device(&String::from("Tars_id"), &String::from("Tars"), &String::from(""), false);
+        let _ = Database::insert_new_device(&String::from("Tars_id2"), &String::from("Tars"), &String::from(""), false);
+        let _ = Database::insert_new_device(&String::from("Atlas_id"), &String::from("Atlas"), &String::from(""), false);
 
         // Tars_id do a /add_device pc Tars_id2 (should succeed)
         server.handle_interaction(Interaction {
-            author_ring_id: String::from("Tars_id"),
+            device_author: Device {
+                id: 1,
+                name: String::new(),
+                ring_id: String::from("Tars_id"),
+                is_bridge: false
+            },
             body: String::from("/add_device pc Tars_id2"),
             datatype: String::from("rori/command"),
             time: time::now(),
@@ -717,7 +826,12 @@ mod tests_server {
         });
         // Tars_id2 do a /add_device pc2 Atlas_id (should fails)
         server.handle_interaction(Interaction {
-            author_ring_id: String::from("Tars_id"),
+            device_author: Device {
+                id: 1,
+                name: String::new(),
+                ring_id: String::from("Tars_id"),
+                is_bridge: false
+            },
             body: String::from("/add_device pc2 Atlas_id"),
             datatype: String::from("rori/command"),
             time: time::now(),
@@ -763,20 +877,27 @@ mod tests_server {
         });
         let mut atlas = User::new();
         atlas.name = String::from("Atlas");
-        let mut atlas_device = Device::new(&String::from("Atlas_id1"));
+        let mut atlas_device = Device::new(&1, &String::from("Atlas_id1"));
         atlas_device.name = String::from("Device");
         atlas.devices.push(atlas_device);
-        let mut atlas_device = Device::new(&String::from("Atlas_id2"));
+        let mut atlas_device = Device::new(&2, &String::from("Atlas_id2"));
         atlas_device.name = String::from("Device2");
         atlas.devices.push(atlas_device);
         let mut users = Vec::new();
         users.push(atlas);
         let mut server = setup(User::new(), users);
+        let _ = Database::insert_new_device(&String::from("Atlas_id1"), &String::from("Atlas"), &String::from("Device"), false);
+        let _ = Database::insert_new_device(&String::from("Atlas_id2"), &String::from("Atlas"), &String::from("Device2"), false);
         assert!(server.anonymous_user.devices.len() == 0);
 
         // Atlas_id1 do a /rm_devce (should succeed)
         server.handle_interaction(Interaction {
-            author_ring_id: String::from("Atlas_id1"),
+            device_author: Device {
+                id: 1,
+                name: String::from("Device"),
+                ring_id: String::from("Atlas_id1"),
+                is_bridge: false
+            },
             body: String::from("/rm_device"),
             datatype: String::from("rori/command"),
             time: time::now(),
@@ -790,7 +911,12 @@ mod tests_server {
 
         // Atlas_id2 do a /rm_devce (should succeed)
         server.handle_interaction(Interaction {
-            author_ring_id: String::from("Atlas_id2"),
+            device_author: Device {
+                id: 2,
+                name: String::from("Device"),
+                ring_id: String::from("Atlas_id2"),
+                is_bridge: false
+            },
             body: String::from("/rm_device"),
             datatype: String::from("rori/command"),
             time: time::now(),
@@ -834,29 +960,39 @@ mod tests_server {
         });
         let mut atlas = User::new();
         atlas.name = String::from("Atlas");
-        let mut atlas_device = Device::new(&String::from("Atlas_id1"));
+        let mut atlas_device = Device::new(&1, &String::from("Atlas_id1"));
         atlas_device.name = String::from("Device");
         atlas.devices.push(atlas_device);
-        let mut atlas_device = Device::new(&String::from("Atlas_id2"));
+        let mut atlas_device = Device::new(&2, &String::from("Atlas_id2"));
         atlas_device.name = String::from("Device2");
         atlas.devices.push(atlas_device);
         let mut tars = User::new();
         tars.name = String::from("Tars");
-        let mut tars_device = Device::new(&String::from("Tars_id1"));
+        let mut tars_device = Device::new(&3, &String::from("Tars_id1"));
         tars_device.name = String::from("Device");
         tars.devices.push(tars_device);
-        let mut tars_device = Device::new(&String::from("Tars_id2"));
+        let mut tars_device = Device::new(&4, &String::from("Tars_id2"));
         tars_device.name = String::from("Device2");
         tars.devices.push(tars_device);
         let mut users = Vec::new();
         users.push(atlas);
         users.push(tars);
         let mut server = setup(User::new(), users);
+        let _ = Database::insert_new_device(&String::from("Atlas_id1"), &String::from("Atlas"), &String::from(""), false);
+        let _ = Database::insert_new_device(&String::from("Atlas_id2"), &String::from("Atlas"), &String::from(""), false);
+        let _ = Database::insert_new_device(&String::from("Tars_id1"), &String::from("Tars"), &String::from(""), false);
+        let _ = Database::insert_new_device(&String::from("Tars_id2"), &String::from("Tars"), &String::from(""), false);
+
         assert!(server.anonymous_user.devices.len() == 0);
 
         // Atlas_id1 do a /rm_device Atlas_id2 (should succeed)
         server.handle_interaction(Interaction {
-            author_ring_id: String::from("Tars_id2"),
+            device_author: Device {
+                id: 4,
+                name: String::new(),
+                ring_id: String::from("Tars_id2"),
+                is_bridge: false
+            },
             body: String::from("/rm_device Tars_id1"),
             datatype: String::from("rori/command"),
             time: time::now(),
@@ -884,18 +1020,18 @@ mod tests_server {
         });
         let mut atlas = User::new();
         atlas.name = String::from("Atlas");
-        let mut atlas_device = Device::new(&String::from("Atlas_id1"));
+        let mut atlas_device = Device::new(&1, &String::from("Atlas_id1"));
         atlas_device.name = String::from("Device");
         atlas.devices.push(atlas_device);
-        let mut atlas_device = Device::new(&String::from("Atlas_id2"));
+        let mut atlas_device = Device::new(&2, &String::from("Atlas_id2"));
         atlas_device.name = String::from("Device2");
         atlas.devices.push(atlas_device);
         let mut tars = User::new();
         tars.name = String::from("Tars");
-        let mut tars_device = Device::new(&String::from("Tars_id1"));
+        let mut tars_device = Device::new(&3, &String::from("Tars_id1"));
         tars_device.name = String::from("Device");
         tars.devices.push(tars_device);
-        let mut tars_device = Device::new(&String::from("Tars_id2"));
+        let mut tars_device = Device::new(&4, &String::from("Tars_id2"));
         tars_device.name = String::from("Device2");
         tars.devices.push(tars_device);
         let mut users = Vec::new();
@@ -906,7 +1042,12 @@ mod tests_server {
 
         // Atlas_id1 do a /rm_device Atlas_id2 (should succeed)
         server.handle_interaction(Interaction {
-            author_ring_id: String::from("Tars_id2"),
+            device_author: Device {
+                id: 4,
+                name: String::new(),
+                ring_id: String::from("Tars_id2"),
+                is_bridge: false
+            },
             body: String::from("/rm_device randomId"),
             datatype: String::from("rori/command"),
             time: time::now(),
@@ -915,24 +1056,6 @@ mod tests_server {
 
         assert!(server.registered_users.len() == 2);
         assert!(server.registered_users.last().unwrap().devices.len() == 2);
-
-        // This should has sent 1 messages
-        let mut idx_signal = 0;
-        let hundred_millis = Duration::from_millis(100);
-        while idx_signal < 10 {
-            let storage = daemon.lock().unwrap().storage.clone();
-            let has_new_info = storage.lock().unwrap().new_info.load(Ordering::SeqCst);
-            if has_new_info {
-                let interactions = storage.lock().unwrap().interactions_sent.clone();
-                assert!(interactions.len() == 1);
-                break;
-            }
-            thread::sleep(hundred_millis);
-            idx_signal += 1;
-            if idx_signal == 10 {
-                panic!("interactions not set!");
-            }
-        }
 
         teardown();
         daemon.lock().unwrap().stop();
@@ -951,24 +1074,29 @@ mod tests_server {
         });
         let mut tars = User::new();
         tars.name = String::from("Tars");
-        tars.devices.push(Device::new(&String::from("Tars_id")));
-        let mut tars_device = Device::new(&String::from("Tars_id1"));
+        tars.devices.push(Device::new(&1, &String::from("Tars_id")));
+        let mut tars_device = Device::new(&2, &String::from("Tars_id1"));
         tars_device.name = String::from("Device");
         tars.devices.push(tars_device);
         let mut badtars = User::new();
         badtars.name = String::from("Tars_pc");
-        badtars.devices.push(Device::new(&String::from("Tars_pc")));
+        badtars.devices.push(Device::new(&3, &String::from("Tars_pc")));
         let mut users = Vec::new();
         users.push(tars);
         users.push(badtars);
         let mut server = setup(User::new(), users);
-        let _ = Database::insert_new_device(&String::from("Tars_id"), &String::from("Tars"), &String::from(""));
-        let _ = Database::insert_new_device(&String::from("Tars_id1"), &String::from("Tars"), &String::from("Device"));
-        let _ = Database::insert_new_device(&String::from("Tars_pc"), &String::from("Tars_pc"), &String::from(""));
+        let _ = Database::insert_new_device(&String::from("Tars_id"), &String::from("Tars"), &String::from(""), false);
+        let _ = Database::insert_new_device(&String::from("Tars_id1"), &String::from("Tars"), &String::from("Device"), false);
+        let _ = Database::insert_new_device(&String::from("Tars_pc"), &String::from("Tars_pc"), &String::from(""), false);
 
         // Tars_pc do a /add_device pc of Tars_id (should fails because of it's someone else device)
         server.handle_interaction(Interaction {
-            author_ring_id: String::from("Tars_pc"),
+            device_author: Device {
+                id: 3,
+                name: String::new(),
+                ring_id: String::from("Tars_pc"),
+                is_bridge: false
+            },
             body: String::from("/rm_device Tars_id1"),
             datatype: String::from("rori/command"),
             time: time::now(),
@@ -988,23 +1116,6 @@ mod tests_server {
         }
         if !confirmed {
             panic!("Tars_id1 not found");
-        }
-        // This should has sent some messages
-        let mut idx_signal = 0;
-        let hundred_millis = Duration::from_millis(100);
-        while idx_signal < 10 {
-            let storage = daemon.lock().unwrap().storage.clone();
-            let has_new_info = storage.lock().unwrap().new_info.load(Ordering::SeqCst);
-            if has_new_info {
-                let interactions = storage.lock().unwrap().interactions_sent.clone();
-                assert!(interactions.len() != 0);
-                break;
-            }
-            thread::sleep(hundred_millis);
-            idx_signal += 1;
-            if idx_signal == 10 {
-                panic!("interactions not set!");
-            }
         }
         teardown();
         daemon.lock().unwrap().stop();
@@ -1027,7 +1138,12 @@ mod tests_server {
         server.add_new_anonymous_device(&String::from("Atlas_id2"));
         server.add_new_anonymous_device(&String::from("Atlas_id3"));
         server.handle_interaction(Interaction {
-            author_ring_id: String::from("Atlas_id1"),
+            device_author: Device {
+                id: 1,
+                name: String::new(),
+                ring_id: String::from("Atlas_id1"),
+                is_bridge: false
+            },
             body: String::from("/register Atlas"),
             datatype: String::from("rori/command"),
             time: time::now(),
@@ -1038,7 +1154,12 @@ mod tests_server {
 
         // Atlas_id authorizes Atlas_id2 to link
         server.handle_interaction(Interaction {
-            author_ring_id: String::from("Atlas_id1"),
+            device_author: Device {
+                id: 1,
+                name: String::new(),
+                ring_id: String::from("Atlas_id1"),
+                is_bridge: false
+            },
             body: String::from("/link Atlas_id2"),
             datatype: String::from("rori/command"),
             time: time::now(),
@@ -1048,7 +1169,12 @@ mod tests_server {
         assert!(server.registered_users.first().unwrap().devices.len() == 1);
         // Atlas_id2 link to Atlas
         server.handle_interaction(Interaction {
-            author_ring_id: String::from("Atlas_id2"),
+            device_author: Device {
+                id: 2,
+                name: String::new(),
+                ring_id: String::from("Atlas_id2"),
+                is_bridge: false
+            },
             body: String::from("/link Atlas"),
             datatype: String::from("rori/command"),
             time: time::now(),
@@ -1061,7 +1187,12 @@ mod tests_server {
 
         // Atlas_id3 asks to be linked to Atlas
         server.handle_interaction(Interaction {
-            author_ring_id: String::from("Atlas_id3"),
+            device_author: Device {
+                id: 3,
+                name: String::new(),
+                ring_id: String::from("Atlas_id3"),
+                is_bridge: false
+            },
             body: String::from("/link Atlas"),
             datatype: String::from("rori/command"),
             time: time::now(),
@@ -1071,7 +1202,12 @@ mod tests_server {
         assert!(server.registered_users.first().unwrap().devices.len() == 2);
         // Atlas_id authorizes Atlas_id3 to be linked
         server.handle_interaction(Interaction {
-            author_ring_id: String::from("Atlas_id1"),
+            device_author: Device {
+                id: 1,
+                name: String::new(),
+                ring_id: String::from("Atlas_id1"),
+                is_bridge: false
+            },
             body: String::from("/link Atlas_id3"),
             datatype: String::from("rori/command"),
             time: time::now(),
@@ -1114,7 +1250,12 @@ mod tests_server {
         let mut server = setup(User::new(), Vec::new());
         server.add_new_anonymous_device(&String::from("Atlas_id1"));
         server.handle_interaction(Interaction {
-            author_ring_id: String::from("Atlas_id1"),
+            device_author: Device {
+                id: 0,
+                name: String::new(),
+                ring_id: String::from("Atlas_id1"),
+                is_bridge: false
+            },
             body: String::from("/register Atlas"),
             datatype: String::from("rori/command"),
             time: time::now(),
@@ -1124,7 +1265,12 @@ mod tests_server {
 
         // Atlas_id authorizes nobody
         server.handle_interaction(Interaction {
-            author_ring_id: String::from("Atlas_id1"),
+            device_author: Device {
+                id: 0,
+                name: String::new(),
+                ring_id: String::from("Atlas_id1"),
+                is_bridge: false
+            },
             body: String::from("/link"),
             datatype: String::from("rori/command"),
             time: time::now(),
@@ -1148,24 +1294,33 @@ mod tests_server {
         });
         let mut eve = User::new();
         eve.name = String::from("Eve");
-        eve.devices.push(Device::new(&String::from("Eve_id1")));
+        eve.devices.push(Device::new(&1, &String::from("Eve_id1")));
         let mut atlas = User::new();
         atlas.name = String::from("Atlas");
-        atlas.devices.push(Device::new(&String::from("Atlas_id1")));
-        atlas.devices.push(Device::new(&String::from("Atlas_id2")));
+        atlas.devices.push(Device::new(&2, &String::from("Atlas_id1")));
+        atlas.devices.push(Device::new(&3, &String::from("Atlas_id2")));
         let mut weasley = User::new();
         weasley.name = String::from("Weasley");
-        weasley.devices.push(Device::new(&String::from("Weasley_id1")));
+        weasley.devices.push(Device::new(&4, &String::from("Weasley_id1")));
         let mut users = Vec::new();
         users.push(eve);
         users.push(atlas);
         users.push(weasley);
         let mut server = setup(User::new(), users);
+        let _ = Database::insert_new_device(&String::from("Eve_id1"), &String::from("Eve"), &String::from(""), false);
+        let _ = Database::insert_new_device(&String::from("Atlas_id1"), &String::from("Atlas"), &String::from(""), false);
+        let _ = Database::insert_new_device(&String::from("Atlas_id2"), &String::from("Atlas"), &String::from(""), false);
+        let _ = Database::insert_new_device(&String::from("Weasley_id1"), &String::from("Weasley"), &String::from(""), false);
         assert!(server.registered_users.len() == 3);
 
         // Atlas_id1 unregister user.
         server.handle_interaction(Interaction {
-            author_ring_id: String::from("Atlas_id1"),
+            device_author: Device {
+                id: 2,
+                name: String::new(),
+                ring_id: String::from("Atlas_id1"),
+                is_bridge: false
+            },
             body: String::from("/unregister"),
             datatype: String::from("rori/command"),
             metadatas: HashMap::new(),
@@ -1207,8 +1362,8 @@ mod tests_server {
         });
         let mut anonymous = User::new();
         anonymous.name = String::new();
-        anonymous.devices.push(Device::new(&String::from("Atlas_id1")));
-        anonymous.devices.push(Device::new(&String::from("Atlas_id2")));
+        anonymous.devices.push(Device::new(&0, &String::from("Atlas_id1")));
+        anonymous.devices.push(Device::new(&1, &String::from("Atlas_id2")));
         let users = Vec::new();
         let mut server = setup(anonymous, users);
         assert!(server.anonymous_user.devices.len() == 2);
@@ -1216,7 +1371,12 @@ mod tests_server {
 
         // Atlas_id1 unregister user.
         server.handle_interaction(Interaction {
-            author_ring_id: String::from("Atlas_id1"),
+            device_author: Device {
+                id: 0,
+                name: String::new(),
+                ring_id: String::from("Atlas_id1"),
+                is_bridge: false
+            },
             body: String::from("/unregister"),
             datatype: String::from("rori/command"),
             time: time::now(),

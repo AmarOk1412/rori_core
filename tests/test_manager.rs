@@ -3,7 +3,6 @@ extern crate dbus;
 extern crate time;
 
 mod mocks;
-
 #[cfg(test)]
 mod tests_manager {
     use core::rori::database::Database;
@@ -18,8 +17,8 @@ mod tests_manager {
     fn setup() {
         let _ = fs::remove_file("rori.db");
         Database::init_db(); // assert this function is correct.
-        let _ = Database::insert_new_device(&String::from("Atlas"), &String::new(), &String::new());
-        let _ = Database::insert_new_device(&String::from("Heisenberg"), &String::new(), &String::new());
+        let _ = Database::insert_new_device(&String::from("Atlas"), &String::new(), &String::new(), false);
+        let _ = Database::insert_new_device(&String::from("Heisenberg"), &String::new(), &String::new(), false);
     }
 
     fn teardown() {
@@ -229,7 +228,7 @@ mod tests_manager {
         assert!(account_list.len() == 1);
         let account = account_list.first().unwrap();
         assert!(account.id == "GLaDOs_id");
-        assert!(account.ring_id == "GLaDOs_ring_id");
+        assert!(account.ring_id == "GLaDOs_hash");
         assert!(account.alias == "GLaDOs");
         assert!(!account.enabled);
 

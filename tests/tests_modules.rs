@@ -8,14 +8,13 @@ extern crate serde_derive;
 extern crate time;
 
 mod mocks;
-
 #[cfg(test)]
 mod tests_server {
     use core::rori::account::Account;
     use core::rori::database::Database;
     use core::rori::interaction::Interaction;
     use core::rori::server::Server;
-    use core::rori::user::User;
+    use core::rori::user::{Device,User};
     use mocks::Daemon;
     use rusqlite;
     use serde_json;
@@ -62,7 +61,7 @@ mod tests_server {
 
         let account = Account {
             id: String::from("GLaDOs_id"),
-            ring_id: String::from("GLaDOs_ring_id"),
+            ring_id: String::from("GLaDOs_hash"),
             alias: String::from("GLaDOs_alias"),
             enabled: true,
         };
@@ -130,7 +129,12 @@ mod tests_server {
         let mut server = setup(User::new(), Vec::new());
         // handle interaction from unknown device
         server.handle_interaction(Interaction {
-            author_ring_id: String::from("Tars_id"),
+            device_author: Device {
+                id: 0,
+                name: String::new(),
+                ring_id: String::from("Tars_id"),
+                is_bridge: false
+            },
             body: String::from("My joke percentage is at 70%!"),
             datatype: String::from("text/plain"),
             time: time::now(),
@@ -152,7 +156,12 @@ mod tests_server {
 
         // handle interaction from unknown device
         server.handle_interaction(Interaction {
-            author_ring_id: String::from("Tars_id"),
+            device_author: Device {
+                id: 0,
+                name: String::new(),
+                ring_id: String::from("Tars_id"),
+                is_bridge: false
+            },
             body: String::from("My joke percentage is at 60%!"),
             datatype: String::from("text/plain"),
             time: time::now(),
@@ -189,7 +198,12 @@ mod tests_server {
         let mut server = setup(User::new(), Vec::new());
         // Tars_id do a yo
         server.handle_interaction(Interaction {
-            author_ring_id: String::from("Tars_id"),
+            device_author: Device {
+                id: 0,
+                name: String::new(),
+                ring_id: String::from("Tars_id"),
+                is_bridge: false
+            },
             body: String::from("yo"),
             datatype: String::from("text/plain"),
             time: time::now(),
@@ -230,7 +244,12 @@ mod tests_server {
         let mut server = setup(User::new(), Vec::new());
         // Tars_id says name
         server.handle_interaction(Interaction {
-            author_ring_id: String::from("PBody_id"),
+            device_author: Device {
+                id: 0,
+                name: String::new(),
+                ring_id: String::from("PBody_id"),
+                is_bridge: false
+            },
             body: String::from("name"),
             datatype: String::from("text/plain"),
             time: time::now(),

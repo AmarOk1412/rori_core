@@ -49,7 +49,7 @@ impl Daemon {
     pub fn new() -> Daemon {
         let glados_account = Account {
             id: String::from("GLaDOs_id"),
-            ring_id: String::from("GLaDOs_ring_id"),
+            ring_id: String::from("GLaDOs_hash"),
             alias: String::from("GLaDOs"),
             enabled: false
         };

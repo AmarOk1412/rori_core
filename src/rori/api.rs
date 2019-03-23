@@ -136,7 +136,13 @@ impl Handler for NameHandler {
             let response = serde_json::to_string(&answer).unwrap_or(String::new());
             return Ok(Response::with((content_type, status::Ok, response)))
         }
-        let devices = Database::get_devices_for_username(&String::from(name));
+        let all_devices = Database::get_devices();
+        let mut devices = Vec::new();
+        for (id, hash, username, devicename, is_bridge) in all_devices {
+            if username == name || name == &*format!("{}_{}", username, devicename) {
+                devices.push((id, hash, username, devicename, is_bridge))
+            }
+        }
         // Build the response
         if devices.len() > 0 {
             let mut is_first = true;

@@ -378,7 +378,7 @@ impl Server {
             }
         }
         // Update database
-        let _ = Database::update_username(&did.to_string(), username);
+        let _ = Database::update_username(&did, username);
     }
 
     /**
@@ -511,7 +511,7 @@ impl Server {
             // search device to modify
             let device = Database::get_device(ring_id, username);
             // register device
-            Database::update_devicename(&device.0.to_string(), devicename)
+            Database::update_devicename(&device.0, devicename)
             .ok().expect(&*format!("registering {}_{} for device {} failed when updating db", username, devicename, device.0));
             // Update device for user
             for registered in &mut self.registered_users {
@@ -572,7 +572,7 @@ impl Server {
                 let id = self.anonymous_user.devices.get(index).unwrap().id;
                 self.anonymous_user.devices.remove(index);
                 // Update database
-                Database::update_username(&id.to_string(), username)
+                Database::update_username(&id, username)
                 .ok().expect(&*format!("registering {} for {} failed when updating db", username, hash));
                 // Create new user
                 let mut new_user = User::new();
@@ -617,8 +617,8 @@ impl Server {
                     if is_bridge == 1 {
                         let _ = Database::remove_device(&mod_device_id);
                     } else {
-                        let _ = Database::update_devicename(&mod_device_id.to_string(), &String::new());
-                        let _ = Database::update_username(&mod_device_id.to_string(), &String::new());
+                        let _ = Database::update_devicename(&mod_device_id, &String::new());
+                        let _ = Database::update_username(&mod_device_id, &String::new());
                     }
                     success = true;
                     break;
@@ -693,8 +693,8 @@ impl Server {
                     if is_bridge {
                         let _ = Database::remove_device(&device.id);
                     } else {
-                        let _ = Database::update_username(&device.id.to_string(), &String::new());
-                        let _ = Database::update_devicename(&device.id.to_string(), &String::new());
+                        let _ = Database::update_username(&device.id, &String::new());
+                        let _ = Database::update_devicename(&device.id, &String::new());
                         self.anonymous_user.devices.push(Device::new(&device.id, &device.ring_id));
                     }
                     info!("update device {} for {}", device.ring_id, registered.name);
