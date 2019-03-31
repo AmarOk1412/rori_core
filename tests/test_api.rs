@@ -198,4 +198,96 @@ mod tests_api {
         let _ = daemon_thread.join();
         teardown();
     }
+
+    #[test]
+    // Scenario
+    // 1. get /name/rori
+    // 2. get /name/weasley where weasley is a registered User from bridge
+    fn api_get_name_with_bridges() {
+        setup();
+        let daemon = Arc::new(Mutex::new(Daemon::new()));
+        let cloned_daemon = daemon.clone();
+        let daemon_thread = thread::spawn(move|| {
+            Daemon::run(cloned_daemon);
+        });
+        let _ = thread::spawn(move|| {
+            let m = Arc::new(Mutex::new(Manager::init("GLaDOs_id").unwrap()));
+            m.lock().unwrap().server.handle_interaction(Interaction {
+                device_author: Device {
+                    id: 1,
+                    name: String::new(),
+                    ring_id: String::from("Weasley"),
+                    is_bridge: false
+                },
+                body: String::from("/bridgify"),
+                datatype: String::from("rori/command"),
+                time: time::now(),
+                metadatas: HashMap::new()
+            });
+            m.lock().unwrap().server.handle_interaction(Interaction {
+                device_author: Device {
+                    id: 1,
+                    name: String::new(),
+                    ring_id: String::from("Weasley"),
+                    is_bridge: false
+                },
+                body: String::from("/register weasley"),
+                datatype: String::from("rori/command"),
+                time: time::now(),
+                metadatas: HashMap::new()
+            });
+            m.lock().unwrap().server.handle_interaction(Interaction {
+                device_author: Device {
+                    id: 1,
+                    name: String::new(),
+                    ring_id: String::from("Weasley"),
+                    is_bridge: false
+                },
+                body: String::from("/add_device core"),
+                datatype: String::from("rori/command"),
+                time: time::now(),
+                metadatas: HashMap::new()
+            });
+            let mut api = API::new(m, String::from("0.0.0.0:1414"),
+                                   String::from("./test_keys/api.p12"), String::new());
+            api.start();
+        });
+
+        let three_secs = Duration::from_millis(3000);
+        thread::sleep(three_secs);
+
+        let client = reqwest::ClientBuilder::new()
+                    .danger_accept_invalid_certs(true)
+                    .build().unwrap();
+
+        let mut res = match client.get("https://127.0.0.1:1414/name/rori").send() {
+            Ok(res) => res,
+            _ => {
+                panic!("Can't get good result from API");
+            }
+        };
+        let mut body: String = String::new();
+        let _ = res.read_to_string(&mut body);
+        let v: Value = from_str(&body).unwrap();
+        assert!(v["name"] == "rori");
+        assert!(v["addr"] == "0xGLaDOs_hash");
+        assert!(v["bridges_devices"] == "");
+
+        let mut res = match client.get("https://127.0.0.1:1414/name/weasley").send() {
+            Ok(res) => res,
+            _ => {
+                panic!("Can't get good result from API");
+            }
+        };
+        let mut body: String = String::new();
+        let _ = res.read_to_string(&mut body);
+        let v: Value = from_str(&body).unwrap();
+        assert!(v["name"] == "weasley");
+        assert!(v["addr"] == "0xWeasley");
+        assert!(v["bridges_devices"] == "Weasley;");
+
+        daemon.lock().unwrap().stop();
+        let _ = daemon_thread.join();
+        teardown();
+    }
 }

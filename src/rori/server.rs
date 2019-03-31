@@ -123,7 +123,6 @@ impl Server {
         let hash = interaction.device_author.ring_id.clone();
         let is_bridge = Database::is_bridge(&hash);
         let mut sub_author = String::new();
-
         if !is_bridge {
             let mut user_found = false;
             for device in &self.anonymous_user.devices {
@@ -156,13 +155,6 @@ impl Server {
             };
             if sub_author.len() > 0 {
                 username = Database::sub_author(&hash, &sub_author);
-            }
-
-            if !Database::is_bridge_with_username(&hash, &username) {
-                warn!("{} is trying to talk for another user", hash);
-                self.send_interaction(&*self.account.id, &hash,
-                    &*format!("{{\"registered\":false, \"username\":\"{}\", \"err\":\"{} is not yours\"}}", username, username), "rori/message");
-                return;
             }
         }
 

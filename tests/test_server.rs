@@ -50,6 +50,8 @@ mod tests_server {
 
     #[test]
     fn test_formatted_interaction() {
+        let mut metadatas: HashMap<String, String> = HashMap::new();
+        metadatas.insert(String::from("foo"), String::from("bar"));
         let interaction = Interaction {
             device_author: Device {
                 id: 0,
@@ -60,7 +62,7 @@ mod tests_server {
             body: String::from("My joke percentage is at 70%!"),
             datatype: String::from("text/plain"),
             time: time::now(),
-            metadatas: HashMap::new(),
+            metadatas: metadatas,
         };
         let formatted_account = format!("{}", interaction);
         assert!(formatted_account == format!("{} ({};{:?}): {}", interaction.device_author, interaction.datatype, interaction.metadatas, interaction.body));
@@ -1121,6 +1123,7 @@ mod tests_server {
         daemon.lock().unwrap().stop();
         let _ = daemon_thread.join();
     }
+
     #[test]
     // Scenario
     // 1. A user authorizes another device to link
@@ -1351,6 +1354,70 @@ mod tests_server {
         let _ = daemon_thread.join();
     }
 
+
+
+    #[test]
+    // Scenario
+    // 1. A bridge is sending a fake sub_author
+    fn server_bridge_send_fake_subauthor() {
+        let daemon = Arc::new(Mutex::new(Daemon::new()));
+        let cloned_daemon = daemon.clone();
+        let daemon_thread = thread::spawn(move|| {
+            Daemon::run(cloned_daemon);
+        });
+        let mut server = setup(User::new(), Vec::new());
+        server.add_new_anonymous_device(&String::from("Atlas_id1"));
+
+        // Add a bridge with one user
+        server.handle_interaction(Interaction {
+            device_author: Device {
+                id: 1,
+                name: String::new(),
+                ring_id: String::from("Atlas_id1"),
+                is_bridge: true
+            },
+            body: String::from("/bridgify"),
+            datatype: String::from("rori/command"),
+            time: time::now(),
+            metadatas: HashMap::new(),
+        });
+        server.handle_interaction(Interaction {
+            device_author: Device {
+                id: 1,
+                name: String::new(),
+                ring_id: String::from("Atlas_id1"),
+                is_bridge: true
+            },
+            body: String::from("/register Atlas"),
+            datatype: String::from("rori/command"),
+            time: time::now(),
+            metadatas: HashMap::new(),
+        });
+        assert!(server.registered_users.len() == 1);
+
+        // Now try to unregister Tars. Should fail
+        let mut metadatas: HashMap<String, String> = HashMap::new();
+        metadatas.insert(String::from("sa"), String::from("Tars"));
+        server.handle_interaction(Interaction {
+            device_author: Device {
+                id: 1,
+                name: String::new(),
+                ring_id: String::from("Atlas_id1"),
+                is_bridge: true
+            },
+            body: String::from("/unregister"),
+            datatype: String::from("rori/command"),
+            time: time::now(),
+            metadatas: metadatas,
+        });
+        // Still one registered user
+        assert!(server.registered_users.len() == 1);
+
+        teardown();
+        daemon.lock().unwrap().stop();
+        let _ = daemon_thread.join();
+    }
+
     #[test]
     // Scenario
     // 1. A user unregister himself but no name found
@@ -1402,6 +1469,225 @@ mod tests_server {
             }
         }
         assert!(idx_signal == 10);
+        teardown();
+        daemon.lock().unwrap().stop();
+        let _ = daemon_thread.join();
+    }
+
+    #[test]
+    // Scenario
+    // 1. A user authorizes another device to link
+    // 2. The other device link to this user from a bridge
+    // 3. Another device ask a user to link
+    // 4. a user accepts.
+    fn server_link_device_with_bridge() {
+        let daemon = Arc::new(Mutex::new(Daemon::new()));
+        let cloned_daemon = daemon.clone();
+        let daemon_thread = thread::spawn(move|| {
+            Daemon::run(cloned_daemon);
+        });
+        let mut server = setup(User::new(), Vec::new());
+        server.add_new_anonymous_device(&String::from("Atlas_id1"));
+        server.add_new_anonymous_device(&String::from("Atlas_id2"));
+        server.add_new_anonymous_device(&String::from("Atlas_id3"));
+        server.handle_interaction(Interaction {
+            device_author: Device {
+                id: 1,
+                name: String::new(),
+                ring_id: String::from("Atlas_id1"),
+                is_bridge: false
+            },
+            body: String::from("/register Atlas"),
+            datatype: String::from("rori/command"),
+            time: time::now(),
+            metadatas: HashMap::new(),
+        });
+        assert!(server.anonymous_user.devices.len() == 2);
+        assert!(server.registered_users.len() == 1);
+
+        // Add a bridge with one user and ask linking
+        server.handle_interaction(Interaction {
+            device_author: Device {
+                id: 2,
+                name: String::new(),
+                ring_id: String::from("Atlas_id2"),
+                is_bridge: true
+            },
+            body: String::from("/bridgify"),
+            datatype: String::from("rori/command"),
+            time: time::now(),
+            metadatas: HashMap::new(),
+        });
+        server.handle_interaction(Interaction {
+            device_author: Device {
+                id: 2,
+                name: String::new(),
+                ring_id: String::from("Atlas_id2"),
+                is_bridge: true
+            },
+            body: String::from("/link Atlas"),
+            datatype: String::from("rori/command"),
+            time: time::now(),
+            metadatas: HashMap::new(),
+        });
+
+        // Atlas_id authorizes Atlas_id2 to link
+        server.handle_interaction(Interaction {
+            device_author: Device {
+                id: 1,
+                name: String::new(),
+                ring_id: String::from("Atlas_id1"),
+                is_bridge: false
+            },
+            body: String::from("/link Atlas_id2"),
+            datatype: String::from("rori/command"),
+            time: time::now(),
+            metadatas: HashMap::new(),
+        });
+
+        // The bridge should be anonymous + Atlas now!
+        assert!(server.anonymous_user.devices.len() == 2);
+        assert!(server.anonymous_user.devices.first().unwrap().ring_id == "Atlas_id3");
+        assert!(server.anonymous_user.devices.last().unwrap().ring_id == "Atlas_id2");
+        assert!(server.registered_users.first().unwrap().devices.len() == 2);
+
+        teardown();
+        daemon.lock().unwrap().stop();
+        let _ = daemon_thread.join();
+    }
+
+     #[test]
+    // Scenario
+    // 1. A User revoke one device from a bridge
+    fn server_remove_device_from_bridge() {
+        let daemon = Arc::new(Mutex::new(Daemon::new()));
+        let cloned_daemon = daemon.clone();
+        let daemon_thread = thread::spawn(move|| {
+            Daemon::run(cloned_daemon);
+        });
+        let mut atlas = User::new();
+        atlas.name = String::from("Atlas");
+        let mut atlas_device = Device::new(&2, &String::from("Atlas_id1"));
+        atlas_device.name = String::from("Device");
+        atlas.devices.push(atlas_device);
+        let mut atlas_device = Device::new(&3, &String::from("Atlas_id2"));
+        atlas_device.name = String::from("Device2");
+        atlas.devices.push(atlas_device);
+        let mut users = Vec::new();
+        users.push(atlas);
+        let mut server = setup(User::new(), users);
+        server.add_new_anonymous_device(&String::from("Atlas_id2"));
+
+        // Add a bridge with one user
+        server.handle_interaction(Interaction {
+            device_author: Device {
+                id: 1,
+                name: String::new(),
+                ring_id: String::from("Atlas_id2"),
+                is_bridge: true
+            },
+            body: String::from("/bridgify"),
+            datatype: String::from("rori/command"),
+            time: time::now(),
+            metadatas: HashMap::new(),
+        });
+
+        let _ = Database::insert_new_device(&String::from("Atlas_id1"), &String::from("Atlas"), &String::from("Device"), false);
+        let _ = Database::insert_new_device(&String::from("Atlas_id2"), &String::from("Atlas"), &String::from("Device2"), true);
+        let _ = Database::update_sub_author(&3, &String::from("Atlas"));
+        assert!(server.anonymous_user.devices.len() == 1);
+
+        // Atlas_id2 do a /unregister (should succeed)
+
+        let mut metadatas: HashMap<String, String> = HashMap::new();
+        metadatas.insert(String::from("sa"), String::from("Atlas"));
+
+        server.handle_interaction(Interaction {
+            device_author: Device {
+                id: 3,
+                name: String::from("Device2"),
+                ring_id: String::from("Atlas_id2"),
+                is_bridge: false
+            },
+            body: String::from("/rm_device"),
+            datatype: String::from("rori/command"),
+            time: time::now(),
+            metadatas: metadatas
+        });
+
+        assert!(server.anonymous_user.devices.len() == 1);
+        assert!(server.anonymous_user.devices.first().unwrap().ring_id == "Atlas_id2");
+        assert!(server.registered_users.len() == 1);
+        assert!(server.registered_users.first().unwrap().devices.first().unwrap().ring_id == "Atlas_id1");
+
+        teardown();
+        daemon.lock().unwrap().stop();
+        let _ = daemon_thread.join();
+    }
+
+     #[test]
+    // Scenario
+    // 1. A User unregister from a bridge
+    fn server_unregister_from_bridge() {
+        let daemon = Arc::new(Mutex::new(Daemon::new()));
+        let cloned_daemon = daemon.clone();
+        let daemon_thread = thread::spawn(move|| {
+            Daemon::run(cloned_daemon);
+        });
+        let mut atlas = User::new();
+        atlas.name = String::from("Atlas");
+        let mut atlas_device = Device::new(&2, &String::from("Atlas_id1"));
+        atlas_device.name = String::from("Device");
+        atlas.devices.push(atlas_device);
+        let mut atlas_device = Device::new(&3, &String::from("Atlas_id2"));
+        atlas_device.name = String::from("Device2");
+        atlas.devices.push(atlas_device);
+        let mut users = Vec::new();
+        users.push(atlas);
+        let mut server = setup(User::new(), users);
+        server.add_new_anonymous_device(&String::from("Atlas_id2"));
+
+        // Add a bridge with one user
+        server.handle_interaction(Interaction {
+            device_author: Device {
+                id: 1,
+                name: String::new(),
+                ring_id: String::from("Atlas_id2"),
+                is_bridge: true
+            },
+            body: String::from("/bridgify"),
+            datatype: String::from("rori/command"),
+            time: time::now(),
+            metadatas: HashMap::new(),
+        });
+
+        let _ = Database::insert_new_device(&String::from("Atlas_id1"), &String::from("Atlas"), &String::from("Device"), false);
+        let _ = Database::insert_new_device(&String::from("Atlas_id2"), &String::from("Atlas"), &String::from("Device2"), true);
+        let _ = Database::update_sub_author(&3, &String::from("Atlas"));
+        assert!(server.anonymous_user.devices.len() == 1);
+
+        // Atlas_id2 do a /unregister (should succeed)
+
+        let mut metadatas: HashMap<String, String> = HashMap::new();
+        metadatas.insert(String::from("sa"), String::from("Atlas"));
+
+        server.handle_interaction(Interaction {
+            device_author: Device {
+                id: 3,
+                name: String::from("Device2"),
+                ring_id: String::from("Atlas_id2"),
+                is_bridge: false
+            },
+            body: String::from("/unregister"),
+            datatype: String::from("rori/command"),
+            time: time::now(),
+            metadatas: metadatas
+        });
+
+        assert!(server.anonymous_user.devices.len() == 2);
+        assert!(server.anonymous_user.devices.first().unwrap().ring_id == "Atlas_id2");
+        assert!(server.registered_users.len() == 0);
+
         teardown();
         daemon.lock().unwrap().stop();
         let _ = daemon_thread.join();

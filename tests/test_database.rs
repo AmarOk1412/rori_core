@@ -240,4 +240,77 @@ mod tests_database {
         assert!(get.len() == 0);
         teardown();
     }
+
+    #[test]
+    fn test_is_bridge_with_username() {
+        setup();
+        // Insert new device
+        let row = Database::insert_new_device(&String::from("GLaDOs"), &String::from("PBody"), &String::from("Atlas"), true);
+        assert!(row.is_ok());
+        assert!(Database::is_bridge_with_username(&String::from("GLaDOs"), &String::from("PBody")));
+        assert!(!Database::is_bridge_with_username(&String::from("GLaDOs"), &String::from("NotPBody")));
+        teardown();
+    }
+
+    #[test]
+    fn test_sub_author() {
+        setup();
+        // Insert new device
+        let row = Database::insert_new_device(&String::from("GLaDOs"), &String::from("PBody"), &String::from("Atlas"), true);
+        assert!(row.is_ok());
+        // Update sub author
+        assert!(Database::sub_author(&String::from("GLaDOs"), &String::from("Asimo")) == String::new());
+        let row = Database::update_sub_author(&1, &String::from("Asimo"));
+        assert!(row.is_ok());
+        assert!(Database::sub_author(&String::from("GLaDOs"), &String::from("Asimo")) == String::from("PBody"));
+        teardown();
+    }
+
+    #[test]
+    fn test_get_devices_for_username() {
+        setup();
+        // Insert new devices
+        let row = Database::insert_new_device(&String::from("GLaDOs"), &String::from("PBody"), &String::from("Atlas"), false);
+        assert!(row.is_ok());
+        let row = Database::update_sub_author(&1, &String::from("Asimo"));
+        assert!(row.is_ok());
+        let row = Database::insert_new_device(&String::from("Weasley"), &String::from("PBody"), &String::from("Asimo"), false);
+        assert!(row.is_ok());
+        let row = Database::insert_new_device(&String::from("Eve"), &String::from("Wall-E"), &String::from(""), false);
+        assert!(row.is_ok());
+        // Shoud get two devices
+        let user_devices = Database::get_devices_for_username(&String::from("PBody"));
+        assert!(user_devices.len() == 2);
+        assert!(user_devices[0].0 == 1);
+        assert!(user_devices[1].0 == 2);
+        teardown();
+    }
+
+    #[test]
+    fn test_insert_bridge_device_twice() {
+        setup();
+        // Insert new devices
+        let row = Database::insert_new_device(&String::from("GLaDOs"), &String::from("PBody"), &String::from("Atlas"), true);
+        assert!(row.is_ok());
+        let row = Database::insert_new_device(&String::from("GLaDOs"), &String::from("PBody"), &String::from("Atlas"), true);
+        assert!(!row.is_ok());
+        teardown();
+    }
+
+    #[test]
+    fn test_get_modules_datatypes() {
+        setup();
+        // Insert modules datatypes
+        let conn = rusqlite::Connection::open("rori.db").unwrap();
+        let row = conn.execute("INSERT INTO modules (name, priority, enabled, type, condition, path)
+                                VALUES (\"foo\", 1, true, \"foo\", \"foo\", \"foo\")", &[]);
+        assert!(row.is_ok());
+        // Get foo in datatypes
+        let datatypes = Database::get_modules_datatypes();
+        assert!(datatypes.len() == 3);
+        assert!(datatypes[0] == String::from("text/plain"));
+        assert!(datatypes[1] == String::from("rori/command"));
+        assert!(datatypes[2] == String::from("foo"));
+        teardown();
+    }
 }

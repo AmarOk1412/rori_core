@@ -12,3 +12,6 @@ config.json
 # Modules related
 *.pyc
 __pycache__
+
+# Tarpaulin
+tarpaulin-report.html
