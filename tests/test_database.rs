@@ -303,7 +303,7 @@ mod tests_database {
         // Insert modules datatypes
         let conn = rusqlite::Connection::open("rori.db").unwrap();
         let row = conn.execute("INSERT INTO modules (name, priority, enabled, type, condition, path)
-                                VALUES (\"foo\", 1, true, \"foo\", \"foo\", \"foo\")", &[]);
+                                VALUES (\"foo\", 1, 1, \"foo\", \"foo\", \"foo\")", &[]);
         assert!(row.is_ok());
         // Get foo in datatypes
         let datatypes = Database::get_modules_datatypes();

@@ -43,6 +43,7 @@ Please, see [wiki](https://github.com/AmarOk1412/rori_core/wiki/)
 + [Modules](https://github.com/AmarOk1412/rori_core/wiki/Modules)
 + [Custom datatypes handling](https://github.com/AmarOk1412/rori_core/wiki/Custom-datatypes-handling)
 + [Emotions](https://github.com/AmarOk1412/rori_core/wiki/Emotions)
++ [Bridges](https://github.com/AmarOk1412/rori_core/wiki/Bridges)
 
 ## Build instructions
 
