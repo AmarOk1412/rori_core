@@ -41,7 +41,7 @@ impl Database {
      * @param id of the device to modify
      * @return if success
      */
-    pub fn bridgify(id: &i32) -> Result<i32, rusqlite::Error> {
+    pub fn bridgify(id: &i32) -> Result<usize, rusqlite::Error> {
         let conn = rusqlite::Connection::open("rori.db").unwrap();
         let mut stmt = conn.prepare("UPDATE devices SET is_bridge=1 WHERE id=:id").unwrap();
         stmt.execute_named(&[(":id", id)])
@@ -53,8 +53,9 @@ impl Database {
      */
     pub fn init_db() {
         let conn = rusqlite::Connection::open("rori.db").unwrap();
-        let mut q = conn.prepare("PRAGMA user_version").unwrap();
-        let version: i64 = q.query_row(&[], |row| row.get(0)).unwrap_or(0);
+        let version: i32 = conn
+            .pragma_query_value(None, "user_version", |row| row.get(0))
+            .unwrap_or(0);
         let mut do_migration = true;
         if version == 1 {
             do_migration = false;
@@ -69,7 +70,7 @@ impl Database {
                 devicename       TEXT,
                 additional_types TEXT,
                 is_bridge        INTEGER
-                )", &[]).unwrap();
+                )", rusqlite::NO_PARAMS).unwrap();
             conn.execute("CREATE TABLE IF NOT EXISTS modules (
                 id          INTEGER PRIMARY KEY,
                 name        TEXT,
@@ -78,7 +79,7 @@ impl Database {
                 type        TEXT,
                 condition   TEXT,
                 path        TEXT
-                )", &[]).unwrap();
+                )", rusqlite::NO_PARAMS).unwrap();
             conn.execute("CREATE TABLE IF NOT EXISTS emotions (
                 username    TEXT PRIMARY KEY,
                 love        INTEGER,
@@ -87,8 +88,8 @@ impl Database {
                 anger       INTEGER,
                 sadness     INTEGER,
                 fear        INTEGER
-                )", &[]).unwrap();
-            conn.execute("PRAGMA user_version = 1", &[]).unwrap();
+                )", rusqlite::NO_PARAMS).unwrap();
+            conn.pragma_update(None, "user_version", &1).unwrap();
         }
         info!("database ready");
     }
@@ -97,7 +98,7 @@ impl Database {
         let conn = rusqlite::Connection::open("rori.db").unwrap();
         let mut stmt = conn.prepare("SELECT additional_types FROM devices WHERE hash=:hash AND is_bridge=1").unwrap();
         let mut rows = stmt.query_named(&[(":hash", hash)]).unwrap();
-        if let Some(_) = rows.next() {
+        if let Ok(Some(_)) = rows.next() {
             return true;
         }
         false
@@ -107,7 +108,7 @@ impl Database {
         let conn = rusqlite::Connection::open("rori.db").unwrap();
         let mut stmt = conn.prepare("SELECT additional_types FROM devices WHERE hash=:hash AND username=:username AND is_bridge=1").unwrap();
         let mut rows = stmt.query_named(&[(":hash", hash), (":username", username)]).unwrap();
-        if let Some(_) = rows.next() {
+        if let Ok(Some(_)) = rows.next() {
             return true;
         }
         false
@@ -124,9 +125,8 @@ impl Database {
         let conn = rusqlite::Connection::open("rori.db").unwrap();
         let mut stmt = conn.prepare("SELECT additional_types FROM devices WHERE id=:id").unwrap();
         let mut rows = stmt.query_named(&[(":id", id)]).unwrap();
-        if let Some(row) = rows.next() {
-            let row = row.unwrap();
-            let row: String = row.get(0);
+        if let Ok(Some(row)) = rows.next() {
+            let row: String = row.get(0).unwrap_or(String::new());
             let dts: Vec<&str> = row.split(' ').collect();
             for dt in dts.into_iter() {
                 if dt != "" {
@@ -147,10 +147,9 @@ impl Database {
         datatypes.push(String::from("rori/command")); // Basic datatype handled by the core
         let conn = rusqlite::Connection::open("rori.db").unwrap();
         let mut stmt = conn.prepare("SELECT DISTINCT type FROM modules;").unwrap();
-        let mut rows = stmt.query(&[]).unwrap();
-        if let Some(row) = rows.next() {
-            let row = row.unwrap();
-            let row: String = row.get(0);
+        let mut rows = stmt.query(rusqlite::NO_PARAMS).unwrap();
+        if let Ok(Some(row)) = rows.next() {
+            let row: String = row.get(0).unwrap_or(String::new());
             datatypes.push(String::from(row));
         }
         datatypes
@@ -163,20 +162,20 @@ impl Database {
      * @param devicename device's name related
      * @return the line's id inserted if success, else an error
      */
-    pub fn insert_new_device(hash: &String, username: &String, devicename: &String, is_bridge: bool) -> Result<i32, Box<Error>> {
+    pub fn insert_new_device(hash: &String, username: &String, devicename: &String, is_bridge: bool) -> Result<usize, Box<dyn Error>> {
         let conn = rusqlite::Connection::open("rori.db").unwrap();
 
         // If already exists
         if is_bridge {
             let mut stmt = conn.prepare("SELECT id FROM devices WHERE hash=:hash AND username=:username AND devicename=:devicename").unwrap();
             let mut rows = stmt.query_named(&[(":hash", hash), (":username", username), (":devicename", devicename)]).unwrap();
-            while let Some(_) = rows.next() {
+            while let Ok(Some(_)) = rows.next() {
                 return Err(static_err("Device already inserted"));
             }
         } else {
             let mut stmt = conn.prepare("SELECT id FROM devices WHERE hash=:hash").unwrap();
             let mut rows = stmt.query_named(&[(":hash", hash)]).unwrap();
-            while let Some(_) = rows.next() {
+            while let Ok(Some(_)) = rows.next() {
                 return Err(static_err("Device already inserted"));
             }
         }
@@ -186,7 +185,7 @@ impl Database {
                                      VALUES (:hash, :username, \"\", :devicename, \"\", :is_bridge)").unwrap();
         match conn.execute_named(&[(":hash", hash), (":username", username), (":devicename", devicename), (":is_bridge", &is_bridge)]) {
             Ok(_) => {
-                return Ok(Database::get_device(hash, username).0);
+                return Ok(Database::get_device(hash, username).0 as usize);
             }
             Err(e) => {
                 return Err(Box::new(e));
@@ -206,13 +205,12 @@ impl Database {
                                    ).unwrap();
        let mut rows = stmt.query_named(&[(":priority", &priority.to_string())]).unwrap();
        let mut modules = Vec::new();
-       while let Some(row) = rows.next() {
-           let row = row.unwrap();
+       while let Ok(Some(row)) = rows.next() {
            modules.push(
                Module {
-                   condition: Box::new(TextCondition::new(row.get(1))),
-                   name: row.get(0),
-                   path: row.get(2),
+                   condition: Box::new(TextCondition::new(row.get(1).unwrap_or(String::new()))),
+                   name: row.get(0).unwrap_or(String::new()),
+                   path: row.get(2).unwrap_or(String::new()),
                    priority: priority,
                    enabled: true,
                }
@@ -231,9 +229,8 @@ impl Database {
         let mut stmt = conn.prepare("SELECT id, hash, username, devicename, is_bridge FROM devices \
             WHERE hash=:hash AND username=:username").unwrap();
         let mut rows = stmt.query_named(&[(":hash", hash), (":username", username)]).unwrap();
-        while let Some(row) = rows.next() {
-            let row = row.unwrap();
-            return (row.get(0), row.get(1), row.get(2), row.get(3), row.get(4));
+        while let Ok(Some(row)) = rows.next() {
+            return (row.get(0).unwrap_or(0), row.get(1).unwrap_or(String::new()), row.get(2).unwrap_or(String::new()), row.get(3).unwrap_or(String::new()), row.get(4).unwrap_or(0));
         }
         (-1, String::new(), String::new(), String::new(), 0)
     }
@@ -246,10 +243,9 @@ impl Database {
         let mut devices: Vec<(i32, String, String, String, bool)> = Vec::new();
         let conn = rusqlite::Connection::open("rori.db").unwrap();
         let mut stmt = conn.prepare("SELECT id, hash, username, devicename, is_bridge FROM devices").unwrap();
-        let mut rows = stmt.query(&[]).unwrap();
-        while let Some(row) = rows.next() {
-            let row = row.unwrap();
-            devices.push((row.get(0), row.get(1), row.get(2), row.get(3), row.get(4)));
+        let mut rows = stmt.query(rusqlite::NO_PARAMS).unwrap();
+        while let Ok(Some(row)) = rows.next() {
+            devices.push((row.get(0).unwrap_or(0), row.get(1).unwrap_or(String::new()), row.get(2).unwrap_or(String::new()), row.get(3).unwrap_or(String::new()), row.get(4).unwrap_or(false)));
         }
         devices
     }
@@ -265,9 +261,8 @@ impl Database {
         let mut stmt = conn.prepare("SELECT id, hash, username, devicename, is_bridge FROM devices \
             WHERE hash=:hash").unwrap();
         let mut rows = stmt.query_named(&[(":hash", &hash.to_string())]).unwrap();
-        while let Some(row) = rows.next() {
-            let row = row.unwrap();
-            devices.push((row.get(0), row.get(1), row.get(2), row.get(3), row.get(4)));
+        while let Ok(Some(row)) = rows.next() {
+            devices.push((row.get(0).unwrap_or(0), row.get(1).unwrap_or(String::new()), row.get(2).unwrap_or(String::new()), row.get(3).unwrap_or(String::new()), row.get(4).unwrap_or(false)));
         }
         devices
     }
@@ -283,9 +278,8 @@ impl Database {
         let mut stmt = conn.prepare("SELECT id, hash, username, devicename, is_bridge FROM devices \
             WHERE username=:username").unwrap();
         let mut rows = stmt.query_named(&[(":username", &username.to_string())]).unwrap();
-        while let Some(row) = rows.next() {
-            let row = row.unwrap();
-            devices.push((row.get(0), row.get(1), row.get(2), row.get(3), row.get(4)));
+        while let Ok(Some(row)) = rows.next() {
+            devices.push((row.get(0).unwrap_or(0), row.get(1).unwrap_or(String::new()), row.get(2).unwrap_or(String::new()), row.get(3).unwrap_or(String::new()), row.get(4).unwrap_or(false)));
         }
         devices
     }
@@ -298,10 +292,9 @@ impl Database {
         let mut result = Vec::new();
         let conn = rusqlite::Connection::open("rori.db").unwrap();
         let mut stmt = conn.prepare("SELECT DISTINCT priority FROM modules ORDER BY priority ASC").unwrap();
-        let mut rows = stmt.query(&[]).unwrap();
-        while let Some(row) = rows.next() {
-            let row = row.unwrap();
-            result.push(row.get(0));
+        let mut rows = stmt.query(rusqlite::NO_PARAMS).unwrap();
+        while let Ok(Some(row)) = rows.next() {
+            result.push(row.get(0).unwrap_or(0));
         }
         result
     }
@@ -311,7 +304,7 @@ impl Database {
      * @param hash to remove
      * @return the id of the removed row or an error
      */
-    pub fn remove_device(id: &i32) -> Result<i32, rusqlite::Error> {
+    pub fn remove_device(id: &i32) -> Result<usize, rusqlite::Error> {
         let conn = rusqlite::Connection::open("rori.db").unwrap();
         let mut conn = conn.prepare("DELETE FROM devices WHERE id=:id").unwrap();
         conn.execute_named(&[(":id", id)])
@@ -328,7 +321,7 @@ impl Database {
         let conn = rusqlite::Connection::open("rori.db").unwrap();
         let mut stmt = conn.prepare("SELECT * FROM devices WHERE username=:username AND devicename=:devicename").unwrap();
         let mut rows = stmt.query_named(&[(":username", username), (":devicename", devicename)]).unwrap();
-        while let Some(_) = rows.next() {
+        while let Ok(Some(_)) = rows.next() {
             return true;
         }
         false
@@ -343,7 +336,7 @@ impl Database {
         let conn = rusqlite::Connection::open("rori.db").unwrap();
         let mut stmt = conn.prepare("SELECT * FROM devices WHERE hash=:hash").unwrap();
         let mut rows = stmt.query_named(&[(":hash", hash)]).unwrap();
-        while let Some(_) = rows.next() {
+        while let Ok(Some(_)) = rows.next() {
             return true;
         }
         false
@@ -362,7 +355,7 @@ impl Database {
         let conn = rusqlite::Connection::open("rori.db").unwrap();
         let mut stmt = conn.prepare("SELECT * FROM devices WHERE username=:username").unwrap();
         let mut rows = stmt.query_named(&[(":username", username)]).unwrap();
-        while let Some(_) = rows.next() {
+        while let Ok(Some(_)) = rows.next() {
             return true;
         }
         false
@@ -374,7 +367,7 @@ impl Database {
      * @param datatypes to set
      * @return if success
      */
-    pub fn set_datatypes(id: &i32, datatypes: Vec<String>) -> Result<i32, rusqlite::Error> {
+    pub fn set_datatypes(id: &i32, datatypes: Vec<String>) -> Result<usize, rusqlite::Error> {
         let datatypes = datatypes.join(" ");
         let conn = rusqlite::Connection::open("rori.db").unwrap();
         let mut stmt = conn.prepare("UPDATE devices SET additional_types=:additional_types WHERE id=:id").unwrap();
@@ -391,9 +384,8 @@ impl Database {
         let conn = rusqlite::Connection::open("rori.db").unwrap();
         let mut stmt = conn.prepare("SELECT username FROM devices WHERE hash=:hash AND sub_author=:sub_author").unwrap();
         let mut rows = stmt.query_named(&[(":hash", hash), (":sub_author", sub_author)]).unwrap();
-        if let Some(row) = rows.next() {
-            let row = row.unwrap();
-            let username : String = row.get(0);
+        if let Ok(Some(row)) = rows.next() {
+            let username : String = row.get(0).unwrap_or(String::new());
             return username;
         }
         String::new()
@@ -409,9 +401,8 @@ impl Database {
         let conn = rusqlite::Connection::open("rori.db").unwrap();
         let mut stmt = conn.prepare("SELECT sub_author FROM devices WHERE hash=:hash AND username=:username").unwrap();
         let mut rows = stmt.query_named(&[(":hash", hash), (":username", username)]).unwrap();
-        if let Some(row) = rows.next() {
-            let row = row.unwrap();
-            let sub_author : String = row.get(0);
+        if let Ok(Some(row)) = rows.next() {
+            let sub_author : String = row.get(0).unwrap_or(String::new());
             return sub_author;
         }
         String::new()
@@ -424,7 +415,7 @@ impl Database {
      * @param devicename new devicename
      * @return the id of the modified row if success else an error
      */
-    pub fn update_devicename(id: &i32, devicename: &String) -> Result<i32, rusqlite::Error> {
+    pub fn update_devicename(id: &i32, devicename: &String) -> Result<usize, rusqlite::Error> {
         let conn = rusqlite::Connection::open("rori.db").unwrap();
         let mut stmt = conn.prepare("UPDATE devices SET devicename=:devicename WHERE id=:id").unwrap();
         stmt.execute_named(&[(":id", id), (":devicename", devicename)])
@@ -436,7 +427,7 @@ impl Database {
      * @param sub_author to set
      * @return if success
      */
-    pub fn update_sub_author(id: &i32, sub_author: &String) -> Result<i32, rusqlite::Error> {
+    pub fn update_sub_author(id: &i32, sub_author: &String) -> Result<usize, rusqlite::Error> {
         let conn = rusqlite::Connection::open("rori.db").unwrap();
         let mut stmt = conn.prepare("UPDATE devices SET sub_author=:sub_author WHERE id=:id").unwrap();
         stmt.execute_named(&[(":id", id), (":sub_author", sub_author)])
@@ -448,7 +439,7 @@ impl Database {
      * @param username new username
      * @return the id of the modified row if success else an error
      */
-    pub fn update_username(id: &i32, username: &String) -> Result<i32, rusqlite::Error> {
+    pub fn update_username(id: &i32, username: &String) -> Result<usize, rusqlite::Error> {
         let conn = rusqlite::Connection::open("rori.db").unwrap();
         let mut stmt = conn.prepare("UPDATE devices SET username=:username WHERE id=:id").unwrap();
         stmt.execute_named(&[(":id", id), (":username", username)])

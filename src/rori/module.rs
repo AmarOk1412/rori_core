@@ -70,7 +70,7 @@ impl TextCondition {
  * Represents a Module
  */
 pub struct Module {
-    pub condition: Box<Condition>,
+    pub condition: Box<dyn Condition>,
     pub name: String,
     pub path: String,
     pub priority: u64,

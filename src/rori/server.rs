@@ -76,7 +76,7 @@ impl Server {
         let insert_into_db = Database::insert_new_device(ring_id, &String::new(), &String::new(), false);
         match insert_into_db {
             Ok(i) => {
-                self.anonymous_user.devices.push(Device::new(&i, &ring_id));
+                self.anonymous_user.devices.push(Device::new(&(i as i32), &ring_id));
             }
             _ => {
                 error!("add_new_anonymous_device failed");
@@ -97,7 +97,7 @@ impl Server {
         if name.to_lowercase() == "rori" {
             return self.account.ring_id.clone();
         }
-        for mut registered in &self.registered_users {
+        for registered in &self.registered_users {
             // Search if username match
             if &*registered.name == name {
                 return registered.devices.first().unwrap().ring_id.clone();
@@ -133,7 +133,7 @@ impl Server {
             }
             if !user_found {
                 // User not found, continue to search.
-                for mut registered in &self.registered_users {
+                for registered in &self.registered_users {
                     for device in &registered.devices {
                         if &*hash == &*device.ring_id {
                             user_found = true;
@@ -350,7 +350,7 @@ impl Server {
             let insert_into_db = Database::insert_new_device(hash, username, &String::new(), true);
             match insert_into_db {
                 Ok(i) => {
-                    did = i;
+                    did = i as i32;
                 }
                 _ => {
                     error!("move_ring_to_user failed");
@@ -549,9 +549,9 @@ impl Server {
                     Ok(i) => {
                         let mut new_user = User::new();
                         new_user.name = username.clone();
-                        new_user.devices.push(Device::new(&i, hash));
+                        new_user.devices.push(Device::new(&(i as i32), hash));
                         self.registered_users.push(new_user);
-                        let _ = Database::update_sub_author(&i, sub_author);
+                        let _ = Database::update_sub_author(&(i as i32), sub_author);
                     }
                     _ => {
                         error!("try_register_username failed when inserting new device");
@@ -691,7 +691,7 @@ impl Server {
                     }
                     info!("update device {} for {}", device.ring_id, registered.name);
                 }
-                let mut msg = format!("{} unregistered", registered.name);
+                let msg = format!("{} unregistered", registered.name);
                 info!("{}", msg);
                 self.send_interaction(&*id, hash, &*format!("{{\"registered\":false, \"username\":\"{}\"\"sa\":\"{}\"}}", registered.name, sub_author), "rori/message");
                 break;
