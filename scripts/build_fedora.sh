@@ -16,3 +16,4 @@ sudo dnf install python python3-devel sqlite-devel -y # for cargo build
 # Install rori_modules dependencies
 sudo dnf -y install python3-pip
 pip3 install wikipedia --user
+pip3 install geocoder --user

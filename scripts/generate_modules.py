@@ -89,7 +89,7 @@ c.execute('INSERT INTO modules (name, priority, enabled, type, condition, path) 
 
 # command/meteo
 print('add meteo module')
-arguments = '("meteo", 2, 1, "plain/text", "(weather|meteo).{1,30}in.", "command/meteo")'
+arguments = '("meteo", 2, 1, "plain/text", "(weather|meteo)", "command/meteo")'
 c.execute('INSERT INTO modules (name, priority, enabled, type, condition, path) VALUES' + arguments)
 
 # music/music_start
