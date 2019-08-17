@@ -114,7 +114,7 @@ mod tests_server {
         let mut server = setup(anonymous, Vec::new());
         assert!(server.anonymous_user.devices.len() == 1);
         let did = Database::insert_new_device(&String::from("Tars_id"), &String::new(), &String::new(), false);
-        let did = did.ok().unwrap();
+        let did = did.ok().unwrap() as i32;
 
         // Tars_id do a /add_types without datatypes
         server.handle_interaction(Interaction {

@@ -48,16 +48,16 @@ mod tests_server {
         // NOTE: if much modules, launch generate_modules.py
         let mut req = conn.prepare("INSERT INTO modules (name, priority, enabled, type, condition, path)
                                     VALUES (\"history\", 0, 1, \"text\", \".*\", \"history\")").unwrap();
-        let _ = req.execute(&[]);
+        let _ = req.execute(rusqlite::NO_PARAMS);
         let mut req = conn.prepare("INSERT INTO modules (name, priority, enabled, type, condition, path)
                                     VALUES (\"hello_world\", 1, 1, \"text\", \"^(salut|bonjour|bonsoir|hei|hi|hello|yo|o/)( rori| ?!?)$\", \"talk/hello_world\")").unwrap();
-        let _ = req.execute(&[]);
+        let _ = req.execute(rusqlite::NO_PARAMS);
         let mut req = conn.prepare("INSERT INTO modules (name, priority, enabled, type, condition, path)
                                     VALUES (\"name\", 2, 1, \"text\", \"name\", \"talk/name\")").unwrap();
-        let _ = req.execute(&[]);
+        let _ = req.execute(rusqlite::NO_PARAMS);
         let mut req = conn.prepare("INSERT INTO modules (name, priority, enabled, type, condition, path)
                                     VALUES (\"name_duplicate\", 3, 1, \"text\", \"name\", \"talk/name\")").unwrap();
-        let _ = req.execute(&[]);
+        let _ = req.execute(rusqlite::NO_PARAMS);
 
         let account = Account {
             id: String::from("GLaDOs_id"),
@@ -147,9 +147,9 @@ mod tests_server {
         // Should be present
         let conn = rusqlite::Connection::open("rori.db").unwrap();
         let mut stmt = conn.prepare("SELECT * FROM History").unwrap();
-        let mut rows = stmt.query(&[]).unwrap();
+        let mut rows = stmt.query(rusqlite::NO_PARAMS).unwrap();
         let mut nbrows = 0;
-        while let Some(_) = rows.next() {
+        while let Ok(Some(_)) = rows.next() {
             nbrows += 1;
         }
         assert!(nbrows == 1);
@@ -174,9 +174,9 @@ mod tests_server {
         // Should be present
         let conn = rusqlite::Connection::open("rori.db").unwrap();
         let mut stmt = conn.prepare("SELECT * FROM History").unwrap();
-        let mut rows = stmt.query(&[]).unwrap();
+        let mut rows = stmt.query(rusqlite::NO_PARAMS).unwrap();
         let mut nbrows = 0;
-        while let Some(_) = rows.next() {
+        while let Ok(Some(_)) = rows.next() {
             nbrows += 1;
         }
         assert!(nbrows == 2);

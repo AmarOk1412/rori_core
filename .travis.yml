@@ -9,6 +9,8 @@ addons:
         packages:
             - libssl-dev
 sudo: true
+services:
+  - xvfb
 git:
     submodules: false
 before_install:
@@ -22,16 +24,12 @@ install:
       RUSTFLAGS="--cfg procmacro2_semver_exempt" cargo install cargo-tarpaulin
     fi
   - rustc -V
-before_script:
-  - "export DISPLAY=:99.0"
-  - "sh -e /etc/init.d/xvfb start"
-  - sleep 3 # give xvfb some time to start
 script:
   - cargo build
   - make test_keys
   - RUST_TEST_THREADS=1 cargo test -- --nocapture
   - |
     # tarpaulin deps
-    if [[ "$TRAVIS_RUST_VERSION" == stable ]]; then
+    if [[ "$TRAVIS_RUST_VERSION" != stable ]]; then
       cargo tarpaulin --ciserver travis-ci --coveralls $TRAVIS_JOB_ID --exclude-files src/main.rs tests/*;
     fi
