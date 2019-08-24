@@ -17,6 +17,11 @@ print('add hello_world module')
 arguments = '("hello_world", 1, 1, "plain/text", "^(salut|bonjour|bonsoir|hei|hi|hello|yo|o/)( rori| ?!?)$", "talk/hello_world")'
 c.execute('INSERT INTO modules (name, priority, enabled, type, condition, path) VALUES' + arguments)
 
+# talk/thank
+print('add thank module')
+arguments = '("thank", 1, 1, "plain/text", "^(merci|thx|thanks|thank you)( rori| ?!?)$", "talk/thank")'
+c.execute('INSERT INTO modules (name, priority, enabled, type, condition, path) VALUES' + arguments)
+
 # talk/goodbye_world
 print('add goodbye_world module')
 arguments = '("goodbye_world", 1, 1, "plain/text", "^(au(.?)revoir|(à|a) la prochaine|bonne soir(ée|ee)|good( |-)bye|bye|j.y.vais)", "talk/goodbye_world")'
@@ -90,6 +95,11 @@ c.execute('INSERT INTO modules (name, priority, enabled, type, condition, path) 
 # command/meteo
 print('add meteo module')
 arguments = '("meteo", 2, 1, "plain/text", "(weather|meteo)", "command/meteo")'
+c.execute('INSERT INTO modules (name, priority, enabled, type, condition, path) VALUES' + arguments)
+
+# command/news
+print('add news module')
+arguments = '("news", 2, 1, "plain/text", "open.+news", "command/news")'
 c.execute('INSERT INTO modules (name, priority, enabled, type, condition, path) VALUES' + arguments)
 
 # music/music_start
