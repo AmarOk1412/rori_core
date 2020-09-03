@@ -177,7 +177,7 @@ impl Manager {
         let method = if accept {"acceptTrustRequest"} else {"discardTrustRequest"};
         let dbus_msg = Message::new_method_call(self.ring_dbus, self.configuration_path,
                                                 self.configuration_iface,
-                                                method).ok().expect("method call fails. Please verify daemon's API.");;
+                                                method).ok().expect("method call fails. Please verify daemon's API.");
         let dbus = Connection::get_private(BusType::Session).ok().expect("connection not ok.");
         let response = dbus.send_with_reply_and_block(
             dbus_msg.append3(account_id, from, accept), 2000).unwrap();
@@ -194,7 +194,7 @@ impl Manager {
     fn build_account(id: &str) -> Account {
         let dbus_msg = Message::new_method_call("cx.ring.Ring", "/cx/ring/Ring/ConfigurationManager",
                                                 "cx.ring.Ring.ConfigurationManager",
-                                                "getAccountDetails").ok().expect("method call fails. Please verify daemon's API.");;
+                                                "getAccountDetails").ok().expect("method call fails. Please verify daemon's API.");
         let dbus = Connection::get_private(BusType::Session).ok().expect("connection not ok.");
         let response = dbus.send_with_reply_and_block(
                                            dbus_msg.append1(id), 2000
@@ -228,7 +228,7 @@ impl Manager {
     pub fn enable_account(&self) {
         let dbus_msg = Message::new_method_call(self.ring_dbus, self.configuration_path,
                                                 self.configuration_iface,
-                                                "sendRegister").ok().expect("method call fails. Please verify daemon's API.");;
+                                                "sendRegister").ok().expect("method call fails. Please verify daemon's API.");
         let dbus = Connection::get_private(BusType::Session).ok().expect("connection not ok.");
         let _ = dbus.send_with_reply_and_block(
             dbus_msg.append2(self.server.account.id.clone(), true), 2000);
@@ -244,7 +244,7 @@ impl Manager {
         let mut devices: Vec<String> = Vec::new();
         let dbus_msg = Message::new_method_call(self.ring_dbus, self.configuration_path,
                                                 self.configuration_iface,
-                                                "getContacts").ok().expect("method call fails. Please verify daemon's API.");;
+                                                "getContacts").ok().expect("method call fails. Please verify daemon's API.");
         let dbus = Connection::get_private(BusType::Session).ok().expect("connection not ok.");
         let response = dbus.send_with_reply_and_block(dbus_msg.append1(account_id), 2000).unwrap();
         let devices_vec: Array<Dict<&str, &str, _>, _> = response.get1().unwrap();
