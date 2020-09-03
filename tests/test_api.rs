@@ -71,8 +71,7 @@ mod tests_api {
                 time: time::now(),
                 metadatas: HashMap::new()
             });
-            let mut api = API::new(m, String::from("0.0.0.0:1412"),
-                                   String::from("./test_keys/api.p12"), String::new());
+            let mut api = API::new(m, String::from("0.0.0.0:1412"));
             api.start();
         });
 
@@ -160,8 +159,7 @@ mod tests_api {
                 time: time::now(),
                 metadatas: HashMap::new(),
             });
-            let mut api = API::new(m, String::from("0.0.0.0:1413"),
-                                   String::from("./test_keys/api.p12"), String::new());
+            let mut api = API::new(m, String::from("0.0.0.0:1413"));
             api.start();
         });
 
@@ -248,8 +246,7 @@ mod tests_api {
                 time: time::now(),
                 metadatas: HashMap::new()
             });
-            let mut api = API::new(m, String::from("0.0.0.0:1414"),
-                                   String::from("./test_keys/api.p12"), String::new());
+            let mut api = API::new(m, String::from("0.0.0.0:1414"));
             api.start();
         });
 

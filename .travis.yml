@@ -26,7 +26,6 @@ install:
   - rustc -V
 script:
   - cargo build
-  - make test_keys
   - RUST_TEST_THREADS=1 cargo test -- --nocapture
   - |
     # tarpaulin deps
