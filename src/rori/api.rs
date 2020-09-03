@@ -26,7 +26,6 @@
  **/
 
 
-use hyper_native_tls::NativeTlsServer;
 use iron::prelude::*;
 use iron::Handler;
 use iron::mime::Mime;
@@ -45,8 +44,6 @@ use std::sync::{Arc, Mutex};
  */
 pub struct API {
     address: String,
-    cert_path: String,
-    cert_pass: String,
     manager: Arc<Mutex<Manager>>
 }
 
@@ -59,11 +56,9 @@ impl API {
      * @param cert_pass
      * @return an API structure
      */
-    pub fn new(manager: Arc<Mutex<Manager>>, address: String, cert_path: String, cert_pass: String) -> API {
+    pub fn new(manager: Arc<Mutex<Manager>>, address: String) -> API {
         API {
             address: address,
-            cert_path: cert_path,
-            cert_pass: cert_pass,
             manager: manager
         }
     }
@@ -80,19 +75,18 @@ impl API {
         };
         let addr_handler = AddrHandler { };
 
-        let ssl = NativeTlsServer::new(&*self.cert_path, &*self.cert_pass).unwrap();
         router.get("/name/:name", name_handler, "name");
         router.get("/addr/:addr", addr_handler, "addr");
         info!("start API endpoint at {}", self.address);
         // Start router
-        Iron::new(router).https(&*self.address, ssl).unwrap();
+        Iron::new(router).http(&*self.address).unwrap();
     }
 }
 
 /**
  * Following classes are used for the RING compatible name server.
  * See documentation here:
- * https://tuleap.ring.cx/plugins/mediawiki/wiki/ring/index.php?title=Name_server_protocol
+ * https://git.jami.net/savoirfairelinux/ring-project/wikis/technical/Name-Server-Protocol
  * For now, only the name endpoint is usefull
  */
 struct NameHandler {

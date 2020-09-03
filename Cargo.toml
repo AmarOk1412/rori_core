@@ -8,7 +8,6 @@ authors = ["Sébastien Blin <sebastien.blin@savoirfairelinux.com>"]
 cpython = "0.2.0"
 dbus = "0.6.1" # requirements libdbus
 env_logger = "0.5.6"
-hyper-native-tls = "0.3.0"
 iron = "0.6.0"
 log = "0.4.1"
 openssl-probe = "0.1.2"

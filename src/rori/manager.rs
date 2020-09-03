@@ -274,7 +274,7 @@ impl Manager {
         if &*msg.interface().unwrap() != "cx.ring.Ring.ConfigurationManager" { return None };
         if &*msg.member().unwrap() != "incomingAccountMessage" { return None };
         // incomingAccountMessage return three arguments
-        let (account_id, author_ring_id, payloads) = msg.get3::<&str, &str, Dict<&str, &str, _>>();
+        let (account_id, _message_id, author_ring_id, payloads) = msg.get4::<&str, &str, &str, Dict<&str, &str, _>>();
         let author_ring_id = author_ring_id.unwrap().to_string();
         let mut body = String::new();
         let mut datatype = String::new();

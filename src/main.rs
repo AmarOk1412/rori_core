@@ -28,7 +28,6 @@
 extern crate cpython;
 extern crate dbus;
 extern crate env_logger;
-extern crate hyper_native_tls;
 extern crate iron;
 #[macro_use]
 extern crate log;
@@ -64,8 +63,6 @@ use std::thread;
 pub struct ConfigFile {
     ring_id: String,
     api_listener: String,
-    cert_path: String,
-    cert_pass: String,
 }
 
 fn clean_string(string: String) -> String {
@@ -94,18 +91,6 @@ fn create_config_file() {
     if s.len() > 0 {
         endpoint = s.clone();
     }
-    let mut s = String::new();
-    print!("Cert path: ");
-    let _ = stdout().flush();
-    stdin().read_line(&mut s).expect("Did not enter a correct string");
-    s = clean_string(s);
-    let cert_path = s.clone();
-    let mut s = String::new();
-    print!("Cert password: ");
-    let _ = stdout().flush();
-    stdin().read_line(&mut s).expect("Did not enter a correct string");
-    s = clean_string(s);
-    let cert_pass = s.clone();
 
     println!("Create an account? y/N: ");
     let _ = stdout().flush();
@@ -169,9 +154,7 @@ fn create_config_file() {
     let account = &accounts.get(s).unwrap().id;
     let config = ConfigFile {
         ring_id: account.clone(),
-        api_listener: endpoint,
-        cert_path: cert_path,
-        cert_pass: cert_pass
+        api_listener: endpoint
     };
     let config = serde_json::to_string_pretty(&config).unwrap_or(String::new());
     let mut file = File::create("config.json").ok().expect("config.json found.");
@@ -213,10 +196,8 @@ fn main() {
         Manager::handle_signals(shared_manager_cloned, stop_cloned);
     });
     let mut api = API::new(shared_manager,
-                           String::from(config["api_listener"].as_str().unwrap_or("")),
-                           String::from(config["cert_path"].as_str().unwrap_or("")),
-                           String::from(config["cert_pass"].as_str().unwrap_or(""))
-                       );
+                           String::from(config["api_listener"].as_str().unwrap_or(""))
+                        );
     api.start();
     stop.store(false, Ordering::SeqCst);
     let _ = test.join();

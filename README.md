@@ -70,8 +70,6 @@ Please, see [wiki](https://github.com/AmarOk1412/rori_core/wiki/)
 {
   "ring_id":"xxxxxxxxxxxxxxxxx",
   "api_listener":"0.0.0.0:1412",
-  "cert_path":"keys/api.p12",
-  "cert_pass":""
 }
 ```
 
@@ -82,6 +80,9 @@ make docker # build the image
 make docker-run
 ```
 
+## Providing https support
+
+The recommended way is to use nginx + [Let's Encrypt](https://letsencrypt.org/) in front of the service to provide https support. The app will not support code for that.
 
 ## Contribute
 

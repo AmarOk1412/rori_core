@@ -83,7 +83,7 @@ mod tests_api {
                     .danger_accept_invalid_certs(true)
                     .build().unwrap();
 
-        let mut res = match client.get("https://127.0.0.1:1412/name/rori").send() {
+        let mut res = match client.get("http://127.0.0.1:1412/name/rori").send() {
             Ok(res) => res,
             _ => {
                 panic!("Can't get good result from API");
@@ -95,7 +95,7 @@ mod tests_api {
         assert!(v["name"] == "rori");
         assert!(v["addr"] == "0xGLaDOs_hash");
 
-        let mut res = match client.get("https://127.0.0.1:1412/name/weasley").send() {
+        let mut res = match client.get("http://127.0.0.1:1412/name/weasley").send() {
             Ok(res) => res,
             _ => {
                 panic!("Can't get good result from API");
@@ -107,7 +107,7 @@ mod tests_api {
         assert!(v["name"] == "weasley");
         assert!(v["addr"] == "0xWeasley");
 
-        let mut res = match client.get("https://127.0.0.1:1412/name/weasley_core").send() {
+        let mut res = match client.get("http://127.0.0.1:1412/name/weasley_core").send() {
             Ok(res) => res,
             _ => {
                 panic!("Can't get good result from API");
@@ -119,7 +119,7 @@ mod tests_api {
         assert!(v["name"] == "weasley_core");
         assert!(v["addr"] == "0xWeasley");
 
-        let mut res = match client.get("https://127.0.0.1:1412/name/eve").send() {
+        let mut res = match client.get("http://127.0.0.1:1412/name/eve").send() {
             Ok(res) => res,
             _ => {
                 panic!("Can't get good result from API");
@@ -172,7 +172,7 @@ mod tests_api {
                     .danger_accept_invalid_certs(true)
                     .build().unwrap();
 
-        let mut res = match client.get("https://127.0.0.1:1413/addr/weasley_id").send() {
+        let mut res = match client.get("http://127.0.0.1:1413/addr/weasley_id").send() {
             Ok(res) => res,
             _ => {
                 panic!("Can't get good result from API");
@@ -183,7 +183,7 @@ mod tests_api {
         let v: Value = from_str(&body).unwrap();
         assert!(v["name"] == "weasley");
 
-        let mut res = match client.get("https://127.0.0.1:1413/addr/eve").send() {
+        let mut res = match client.get("http://127.0.0.1:1413/addr/eve").send() {
             Ok(res) => res,
             _ => {
                 panic!("Can't get good result from API");
@@ -260,7 +260,7 @@ mod tests_api {
                     .danger_accept_invalid_certs(true)
                     .build().unwrap();
 
-        let mut res = match client.get("https://127.0.0.1:1414/name/rori").send() {
+        let mut res = match client.get("http://127.0.0.1:1414/name/rori").send() {
             Ok(res) => res,
             _ => {
                 panic!("Can't get good result from API");
@@ -273,7 +273,7 @@ mod tests_api {
         assert!(v["addr"] == "0xGLaDOs_hash");
         assert!(v["bridges_devices"] == "");
 
-        let mut res = match client.get("https://127.0.0.1:1414/name/weasley").send() {
+        let mut res = match client.get("http://127.0.0.1:1414/name/weasley").send() {
             Ok(res) => res,
             _ => {
                 panic!("Can't get good result from API");

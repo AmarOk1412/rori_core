@@ -1,16 +1,16 @@
-# TODO share volumes like keys/, rori.db and config.json to avoid to lose everything
+# TODO share volumes like rori.db and config.json to avoid to lose everything
 
-FROM ubuntu:17.10
+FROM ubuntu:20.04
 MAINTAINER Sébastien Blin <contact@enconn.fr>
 
 RUN apt-get update -y
 
 # Install ring-daemon
 RUN apt-get install gnupg2 dirmngr software-properties-common -y
-RUN sh -c "echo 'deb https://dl.ring.cx/ring-nightly/ubuntu_17.10/ ring main' > /etc/apt/sources.list.d/ring-nightly-main.list"
+RUN sh -c "echo 'deb https://dl.jami.net/nightly/ubuntu_20.04/ ring main' > /etc/apt/sources.list.d/jami-nightly-main.list"
 RUN apt-key adv --keyserver pgp.mit.edu --recv-keys A295D773307D25A33AE72F2F64CD5FA175348F84
 RUN add-apt-repository universe
-RUN apt-get update -y && apt-get install ring -y
+RUN apt-get update -y && apt-get install jami -y
 
 # Install Rust
 RUN apt-get install curl sudo -y

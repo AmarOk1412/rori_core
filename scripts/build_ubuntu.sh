@@ -1,7 +1,7 @@
 sudo apt-get update -y
 # Install ring-daemon
 sudo apt-get install gnupg2 dirmngr software-properties-common -y
-sudo sh -c "echo 'deb https://dl.ring.cx/ring-nightly/ubuntu_17.10/ ring main' > /etc/apt/sources.list.d/ring-nightly-main.list"
+sudo sh -c "echo 'deb https://dl.jami.net/nightly/ubuntu_20.04/ ring main' > /etc/apt/sources.list.d/jami-nightly-main.list"
 sudo apt-key adv --keyserver pgp.mit.edu --recv-keys A295D773307D25A33AE72F2F64CD5FA175348F84
 sudo add-apt-repository universe
 sudo apt-get update -y && apt-get install ring -y
