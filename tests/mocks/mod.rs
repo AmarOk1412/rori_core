@@ -93,6 +93,7 @@ impl Daemon {
         let incoming_account_message = Some(Arc::new(
             f.signal("incomingAccountMessage", ())
              .arg(("accountID", "s"))
+             .arg(("messageID", "s"))
              .arg(("from", "s"))
              .arg(("payload", "ay"))
         ));
@@ -272,7 +273,7 @@ impl Daemon {
                 let content = emit_incoming_account_message.first().unwrap();
                 let (datatype, body) = (content.0.clone(), content.1.clone());
                 let dict = Dict::new(vec![(&*datatype, &*body)]);
-                let msg = signal.msg(&path, &iface).append3("GLaDOs_id", "Eve", dict);
+                let msg = signal.msg(&path, &iface).append1("GLaDOs_id").append3("0", "Eve", dict);
                 let _ = connection.send(msg).map_err(|_| "Sending DBus signal failed");
                 daemon.lock().unwrap().emit_incoming_account_message = Vec::new();
             }
