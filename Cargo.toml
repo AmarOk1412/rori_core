@@ -5,6 +5,7 @@ authors = ["Sébastien Blin <sebastien.blin@savoirfairelinux.com>"]
 
 
 [dependencies]
+clokwerk = "0.3.3"
 cpython = "0.2.0"
 dbus = "0.6.1" # requirements libdbus
 env_logger = "0.5.6"

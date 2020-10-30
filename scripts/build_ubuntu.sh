@@ -18,4 +18,4 @@ sudo apt-get install build-essential -y
 
 # Install rori_modules dependencies
 sudo apt-get -y install python3-pip
-pip3 install wikipedia --user
+pip3 install wikipedia feedparser --user

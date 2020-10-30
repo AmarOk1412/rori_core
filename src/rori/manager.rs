@@ -30,6 +30,7 @@ use dbus::arg::{Array, Dict};
 use rori::account::Account;
 use rori::database::Database;
 use rori::interaction::Interaction;
+use rori::scheduler::Scheduler;
 use rori::server::Server;
 use rori::user::Device;
 use std::collections::HashMap;
@@ -43,6 +44,7 @@ use time;
  */
 pub struct Manager {
     pub server: Server,
+    pub scheduler: Scheduler,
 
     ring_dbus: &'static str,
     configuration_path: &'static str,
@@ -59,6 +61,7 @@ impl Manager {
         Database::init_db();
         let mut manager = Manager {
             server: Server::new(Account::null()),
+            scheduler: Scheduler::new(),
 
             ring_dbus: "cx.ring.Ring",
             configuration_path: "/cx/ring/Ring/ConfigurationManager",

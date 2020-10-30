@@ -38,7 +38,6 @@ use std::collections::HashMap;
  * Core class.
  * Used to manages users and handle interactions with these users
  */
-#[derive(Debug, Clone)]
 pub struct Server {
     pub registered_users: Vec<User>,
     pub anonymous_user: User,

@@ -26,7 +26,9 @@
  **/
 
 use rori::module::*;
+use rori::scheduler::ScheduledTask;
 use rusqlite;
+use std::collections::HashMap;
 use std::error::Error;
 use string_error::static_err;
 
@@ -88,6 +90,18 @@ impl Database {
                 anger       INTEGER,
                 sadness     INTEGER,
                 fear        INTEGER
+                )", rusqlite::NO_PARAMS).unwrap();
+            conn.execute("CREATE TABLE IF NOT EXISTS scheduler (
+                id          INTEGER AUTO_INCREMENT PRIMARY KEY,
+                module      INTEGER,
+                parameter   TEXT,
+                at          TEXT,
+                seconds     INTEGER,
+                minutes     INTEGER,
+                hours       INTEGER,
+                days        STRING
+                repeat      BOOLEAN,
+                FOREIGN KEY (module) REFERENCES modules(id)
                 )", rusqlite::NO_PARAMS).unwrap();
             conn.pragma_update(None, "user_version", &1).unwrap();
         }
@@ -203,20 +217,45 @@ impl Database {
         let mut stmt = conn.prepare("SELECT name, condition, path \
                                      FROM modules WHERE priority=:priority AND enabled=1"
                                    ).unwrap();
-       let mut rows = stmt.query_named(&[(":priority", &priority.to_string())]).unwrap();
-       let mut modules = Vec::new();
-       while let Ok(Some(row)) = rows.next() {
-           modules.push(
-               Module {
-                   condition: Box::new(TextCondition::new(row.get(1).unwrap_or(String::new()))),
-                   name: row.get(0).unwrap_or(String::new()),
-                   path: row.get(2).unwrap_or(String::new()),
-                   priority: priority,
-                   enabled: true,
-               }
-           );
-       }
-       modules
+        let mut rows = stmt.query_named(&[(":priority", &priority.to_string())]).unwrap();
+        let mut modules = Vec::new();
+        while let Ok(Some(row)) = rows.next() {
+            modules.push(
+                Module {
+                    condition: Box::new(TextCondition::new(row.get(1).unwrap_or(String::new()))),
+                    name: row.get(0).unwrap_or(String::new()),
+                    path: row.get(2).unwrap_or(String::new()),
+                    priority: priority,
+                    enabled: true,
+                }
+            );
+        }
+        modules
+    }
+
+    /**
+     * Get the module from its id
+     * @param id    Id of the module
+     * @return The module or None if not found
+     */
+    pub fn get_module(id: &i32) -> Option<Module> {
+        let conn = rusqlite::Connection::open("rori.db").unwrap();
+        let mut stmt = conn.prepare("SELECT name, condition, path, priority, enabled \
+                                     FROM modules WHERE id=:id"
+                                   ).unwrap();
+        let mut rows = stmt.query_named(&[(":id", &id)]).unwrap();
+        if let Ok(Some(row)) = rows.next() {
+            return Some(
+                Module {
+                    condition: Box::new(TextCondition::new(row.get(1).unwrap_or(String::new()))),
+                    name: row.get(0).unwrap_or(String::new()),
+                    path: row.get(2).unwrap_or(String::new()),
+                    priority: row.get(3).unwrap_or(0 as i32) as u64,
+                    enabled: row.get(4).unwrap(),
+                }
+            );
+        }
+        None
     }
 
     /**
@@ -408,7 +447,6 @@ impl Database {
         String::new()
     }
 
-
     /**
      * Update a devicename
      * @param id to search
@@ -443,5 +481,153 @@ impl Database {
         let conn = rusqlite::Connection::open("rori.db").unwrap();
         let mut stmt = conn.prepare("UPDATE devices SET username=:username WHERE id=:id").unwrap();
         stmt.execute_named(&[(":id", id), (":username", username)])
+    }
+
+    /**
+     * Return tasks for the scheduler
+     * @return a list of tasks
+     */
+    pub fn get_tasks() -> Vec<ScheduledTask> {
+        let mut tasks: Vec<ScheduledTask> = Vec::new();
+        let conn = rusqlite::Connection::open("rori.db").unwrap();
+        let mut stmt = conn.prepare("SELECT * FROM scheduler").unwrap();
+        let mut rows = stmt.query(rusqlite::NO_PARAMS).unwrap();
+        while let Ok(Some(row)) = rows.next() {
+            tasks.push(ScheduledTask {
+                id: row.get(0).unwrap(),
+                module: row.get(1).unwrap(),
+                parameter: row.get(2).unwrap(),
+                at: row.get(3).unwrap(),
+                seconds: row.get(4).unwrap(),
+                minutes: row.get(5).unwrap(),
+                hours: row.get(6).unwrap(),
+                days: row.get(7).unwrap(),
+                repeat: row.get(8).unwrap(),
+            });
+        }
+        tasks
+    }
+
+    /**
+     * Get a task from the id
+     * @param id    Id of the task
+     * @return the task or None
+     */
+    pub fn get_task(id: &i32) -> Option<ScheduledTask> {
+        let conn = rusqlite::Connection::open("rori.db").unwrap();
+        let mut stmt = conn.prepare("SELECT * FROM scheduler WHERE id=:id").unwrap();
+        let mut rows = stmt.query_named(&[(":id", id)]).unwrap();
+        if let Ok(Some(row)) = rows.next() {
+            return Some(ScheduledTask {
+                id: row.get(0).unwrap(),
+                module: row.get(1).unwrap(),
+                parameter: row.get(2).unwrap(),
+                at: row.get(3).unwrap(),
+                seconds: row.get(4).unwrap(),
+                minutes: row.get(5).unwrap(),
+                hours: row.get(6).unwrap(),
+                days: row.get(7).unwrap(),
+                repeat: row.get(8).unwrap(),
+            });
+        }
+        None
+    }
+
+    /**
+     * Search a specific task linked to a module and via a subset of parameters
+     * @param module        The module to search for
+     * @param parameters    The subset of parameters to search
+     * @return The task if found otherwise returns None
+     */
+    pub fn search_task(module: &String, parameters: HashMap<String, String>) -> Option<ScheduledTask> {
+        let conn = rusqlite::Connection::open("rori.db").unwrap();
+        let mut stmt = conn.prepare("SELECT * FROM scheduler WHERE module=:module").unwrap();
+        let mut rows = stmt.query_named(&[(":module", module)]).unwrap();
+        while let Ok(Some(row)) = rows.next() {
+            // Test subset
+            let row_parameters: HashMap<String, String> = serde_json::from_str(&*row.get(2).unwrap_or(String::new())).unwrap_or(HashMap::new());
+            let mut is_subset = true;
+            for (key, value) in &parameters {
+                if !row_parameters.contains_key(key) || row_parameters.get(key).unwrap() != value {
+                    is_subset = false;
+                    break;
+                }
+            }
+            // Return task if successful
+            if is_subset {
+                return Some(ScheduledTask {
+                    id: row.get(0).unwrap(),
+                    module: row.get(1).unwrap(),
+                    parameter: row.get(2).unwrap(),
+                    at: row.get(3).unwrap(),
+                    seconds: row.get(4).unwrap(),
+                    minutes: row.get(5).unwrap(),
+                    hours: row.get(6).unwrap(),
+                    days: row.get(7).unwrap(),
+                    repeat: row.get(8).unwrap(),
+                });
+            }
+        }
+        None
+    }
+
+    pub fn add_task(task: &ScheduledTask) -> Option<i32> {
+        let conn = rusqlite::Connection::open("rori.db").unwrap();
+        // Else insert!
+        let mut conn = conn.prepare("INSERT INTO scheduler (module, parameter, at, seconds, minutes, hours, days, repeat)
+                                     VALUES (:module, :parameter, :at, :seconds, :minutes, :hours, :days, :repeat)").unwrap();
+        match conn.execute_named(&[(":module", &task.module),
+                                   (":parameter", &task.parameter),
+                                   (":at", &task.at),
+                                   (":seconds", &task.seconds),
+                                   (":minutes", &task.minutes),
+                                   (":hours", &task.hours),
+                                   (":days", &task.days),
+                                   (":repeat", &task.repeat)]) {
+            Ok(id) => {
+                return Some(id as i32);
+            }
+            Err(e) => {
+                return None;
+            }
+        }
+    }
+
+    /**
+     * Remove a task via its id
+     * @param id    Id of the task
+     * @return the result of the operation
+     */
+    pub fn rm_task(id: &i32) -> Result<usize, rusqlite::Error> {
+        let conn = rusqlite::Connection::open("rori.db").unwrap();
+        let mut conn = conn.prepare("DELETE FROM scheduler WHERE id=:id").unwrap();
+        conn.execute_named(&[(":id", id)])
+    }
+
+    /**
+     * Update a scheduler task
+     * @param task      The task to update (identified by its id)
+     * @return The result of the operation
+     */
+    pub fn update_task(task: &ScheduledTask) -> Result<usize, rusqlite::Error> {
+        let conn = rusqlite::Connection::open("rori.db").unwrap();
+        let mut stmt = conn.prepare("UPDATE devices SET module=:module, \
+                                                        parameter=:parameter, \
+                                                        at=:at, \
+                                                        seconds=:seconds, \
+                                                        minutes=:minutes, \
+                                                        hours=:hours, \
+                                                        days=:days, \
+                                                        repeat=:repeat, \
+                                                        WHERE id=:id").unwrap();
+        stmt.execute_named(&[(":id", &task.id),
+                             (":module", &task.module),
+                             (":parameter", &task.parameter),
+                             (":at", &task.at),
+                             (":seconds", &task.seconds),
+                             (":minutes", &task.minutes),
+                             (":hours", &task.hours),
+                             (":days", &task.days),
+                             (":repeat", &task.repeat)])
     }
 }

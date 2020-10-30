@@ -25,6 +25,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  **/
 
+extern crate clokwerk;
 extern crate cpython;
 extern crate dbus;
 extern crate env_logger;

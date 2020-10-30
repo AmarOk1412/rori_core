@@ -32,5 +32,6 @@ pub mod interaction;
 pub mod manager;
 pub mod module;
 pub mod modulemanager;
+pub mod scheduler;
 pub mod server;
 pub mod user;
