@@ -82,7 +82,7 @@ impl Module {
      * Execute the module and get if we should continue to process other modules
      * @param self
      * @param interaction which has trigerred this module
-     * @return if we continue to process the interaction
+     * @return if we continue to process the interaction (true on error to avoid to stop other modules)
      */
     pub fn exec(&self, interaction: &Interaction) -> bool {
         // Init python module
@@ -95,10 +95,23 @@ impl Module {
         py.eval("sys.path.append('.')", None, Some(&locals)).unwrap();
         py.eval("sys.path.append('./rori_modules/')", None, Some(&locals)).unwrap();
         // This will execute the linked module
-        let load_module = py.import("rori_modules.load_module").unwrap();
+        let load_module = py.import("rori_modules.load_module");
+        if !load_module.is_ok() {
+            error!("Error loading module {}", self.name);
+            return true;
+        }
+        let load_module = load_module.unwrap();
         let interaction = serde_json::to_string(&interaction).unwrap_or(String::new());
-        let continue_processing: bool = load_module.call(py, "exec_module",
-            (self.path.clone(), interaction), None).unwrap().extract(py).unwrap();
-        continue_processing
+        let continue_processing = load_module.call(py, "exec_module", (self.path.clone(), interaction), None);
+        if !continue_processing.is_ok() {
+            error!("Error while executing module {}", self.name);
+            return true;
+        }
+        let continue_processing = continue_processing.unwrap().extract(py);
+        if continue_processing.is_ok() {
+            error!("Error while getting result for module {}", self.name);
+            return true;
+        }
+        continue_processing.unwrap()
     }
 }
