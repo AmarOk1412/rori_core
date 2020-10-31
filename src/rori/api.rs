@@ -77,6 +77,11 @@ impl API {
 
         router.get("/name/:name", name_handler, "name");
         router.get("/addr/:addr", addr_handler, "addr");
+
+        // POST task/add {JSON}
+        // POST task/update {JSON}
+        // DELETE task/id
+        // GET task?name: String&device: String&user: String => {JSON}
         info!("start API endpoint at {}", self.address);
         // Start router
         Iron::new(router).http(&*self.address).unwrap();

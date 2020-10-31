@@ -60,7 +60,7 @@ impl Database {
             .unwrap_or(0);
         let mut do_migration = true;
         if version == 1 {
-            do_migration = false;
+            do_migration = true;
         }
         if do_migration {
             info!("migrate database to version 1");
@@ -92,15 +92,15 @@ impl Database {
                 fear        INTEGER
                 )", rusqlite::NO_PARAMS).unwrap();
             conn.execute("CREATE TABLE IF NOT EXISTS scheduler (
-                id          INTEGER AUTO_INCREMENT PRIMARY KEY,
+                id          INTEGER PRIMARY KEY AUTOINCREMENT,
                 module      INTEGER,
                 parameter   TEXT,
                 at          TEXT,
                 seconds     INTEGER,
                 minutes     INTEGER,
                 hours       INTEGER,
-                days        STRING
-                repeat      BOOLEAN,
+                days        STRING,
+                repeat      INTEGER,
                 FOREIGN KEY (module) REFERENCES modules(id)
                 )", rusqlite::NO_PARAMS).unwrap();
             conn.pragma_update(None, "user_version", &1).unwrap();
@@ -256,6 +256,23 @@ impl Database {
             );
         }
         None
+    }
+
+    /**
+     * Get the module id from its name
+     * @param name    Name of the module
+     * @return The id or 0 if not found
+     */
+    pub fn get_module_id_by_name(name: &String) -> i32 {
+        let conn = rusqlite::Connection::open("rori.db").unwrap();
+        let mut stmt = conn.prepare("SELECT id \
+                                     FROM modules WHERE name=:name"
+                                   ).unwrap();
+        let mut rows = stmt.query_named(&[(":name", &name)]).unwrap();
+        if let Ok(Some(row)) = rows.next() {
+            return row.get(0).unwrap();
+        }
+        0
     }
 
     /**

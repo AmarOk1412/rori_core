@@ -102,6 +102,11 @@ print('add news module')
 arguments = '("news", 2, 1, "plain/text", "open.+news", "command/news")'
 c.execute('INSERT INTO modules (name, priority, enabled, type, condition, path) VALUES' + arguments)
 
+# command/news
+print('add feed module')
+arguments = '("feed", 2, 1, "plain/text", "$", "command/feed")'
+c.execute('INSERT INTO modules (name, priority, enabled, type, condition, path) VALUES' + arguments)
+
 # music/music_start
 print('add music_start module')
 arguments = '("music_start", 1, 1, "plain/text", "^(musi(c|que) ?!?)|((play|lance|joue).{1,30}(musi(c|que) ?!?))$", "music/start")'

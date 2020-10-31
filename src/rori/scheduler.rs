@@ -59,26 +59,31 @@ pub struct Scheduler {
 impl Scheduler {
     pub fn new() -> Scheduler {
         let mut scheduler = clokwerk::Scheduler::new();
-        scheduler.every(1.minutes()).run(|| {
-            println!("@@@ Scheduler todo");
-            let feed: Module = Module {
-                condition: Box::new(TextCondition::new(String::new())),
-                name: String::from("feed"),
-                path: String::from("command/feed"),
-                priority: 0,
-                enabled: true,
-            };
-            let mut metadatas: HashMap<String, String> = HashMap::new();
-            metadatas.insert(String::from("ch"), String::from("495695106758803456"));
-            feed.exec(&Interaction {
-                device_author: Device::new(&-1, &String::from("c2a2818dd78b95ec1bffb9845c421925970225c0")),
-                body: String::new(),
-                metadatas: metadatas,
-                datatype: String::new(),
-                time: time::now()
-            });
-        });
 
+        /*let mut param: HashMap<String, String> = HashMap::new();
+        param.insert(String::from("ch"), String::from("495695106758803456"));
+        param.insert(String::from("user"), String::from("c2a2818dd78b95ec1bffb9845c421925970225c0"));
+
+        let param = serde_json::to_string(&param).unwrap_or(String::new());
+        let module_id = Database::get_module_id_by_name(&String::from("feed"));
+        if module_id == 0 {
+            warn!("Module not found");
+        } else {
+            let task = ScheduledTask {
+                id: 0,
+                module: module_id,
+                parameter: param,
+                at: String::new(),
+                seconds: 0,
+                minutes: 1,
+                hours: 0,
+                days: String::new(),
+                repeat: true,
+            };
+            let ok = Database::add_task(&task).unwrap();
+            println!("{:?}", ok);
+        }*/
+    
         let mut handlers = Vec::new();
         handlers.push(scheduler.watch_thread(Duration::from_secs(1)));
         let mut result = Scheduler {
@@ -167,21 +172,24 @@ impl Scheduler {
             let module = Database::get_module(&task.module);
 
             if module.is_none() {
-                // TODO remove from db as malformed
+                warn!("Remove task with id {} because no module were found", task.id);
+                Database::rm_task(&task.id);
                 continue;
             }
 
             // TODO deserialize interaction?
             let metadatas: HashMap<String, String> = serde_json::from_str(&*task.parameter).unwrap_or(HashMap::new());
 
-            if !metadatas.is_empty() {
-                // TODO remove from db as malformed
+            if metadatas.is_empty() {
+                warn!("Remove task {} with id {} because no parameters were specified", module.name, task.id);
+                Database::rm_task(&task.id);
                 continue;
             }
 
-            let devices = Database::get_devices_for_username(&metadatas["userc  "]);
+            let devices = Database::get_devices_for_hash(&metadatas["user"]);
             if devices.is_empty() {
-                // TODO remove from db as malformed
+                warn!("Remove task {} with id {} because no device were found", module.name, task.id);
+                Database::rm_task(&task.id);
                 continue;
             }
             let interaction = Interaction {
@@ -193,6 +201,7 @@ impl Scheduler {
             };
             let module = module.unwrap();
 
+            info!("Scheduled new job for module {} with interaction {}", module.name, interaction);
             job.run(move || {
                 info!("Scheduler exec job for module {} with interaction {}", module.name, interaction);
                 module.exec(&interaction);
