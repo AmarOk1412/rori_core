@@ -25,16 +25,14 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  **/
 
-use clokwerk::{Interval, Job, ScheduleHandle, TimeUnits};
+use clokwerk::{Interval, ScheduleHandle, TimeUnits};
 use clokwerk::Interval::*;
 use rori::database::Database;
 
 
 use std::collections::HashMap;
 use rori::interaction::Interaction;
-use rori::user::{Device, User};
-use rori::module::Module;
-use rori::module::TextCondition;
+use rori::user::Device;
 use std::time::Duration;
 
 pub struct ScheduledTask {
@@ -58,32 +56,7 @@ pub struct Scheduler {
 
 impl Scheduler {
     pub fn new() -> Scheduler {
-        let mut scheduler = clokwerk::Scheduler::new();
-
-        /*let mut param: HashMap<String, String> = HashMap::new();
-        param.insert(String::from("ch"), String::from("495695106758803456"));
-        param.insert(String::from("user"), String::from("c2a2818dd78b95ec1bffb9845c421925970225c0"));
-
-        let param = serde_json::to_string(&param).unwrap_or(String::new());
-        let module_id = Database::get_module_id_by_name(&String::from("feed"));
-        if module_id == 0 {
-            warn!("Module not found");
-        } else {
-            let task = ScheduledTask {
-                id: 0,
-                module: module_id,
-                parameter: param,
-                at: String::new(),
-                seconds: 0,
-                minutes: 1,
-                hours: 0,
-                days: String::new(),
-                repeat: true,
-            };
-            let ok = Database::add_task(&task).unwrap();
-            println!("{:?}", ok);
-        }*/
-    
+        let scheduler = clokwerk::Scheduler::new();
         let mut handlers = Vec::new();
         handlers.push(scheduler.watch_thread(Duration::from_secs(1)));
         let mut result = Scheduler {
@@ -92,6 +65,56 @@ impl Scheduler {
 
         result.load_tasks();
         result
+    }
+
+    pub fn add_task(&mut self, content: &String) -> Option<i32> {
+        let content: HashMap<String, String> = serde_json::from_str(&*content).unwrap_or(HashMap::new());
+        let task = ScheduledTask {
+            id: content.get("id").unwrap().parse::<i32>().unwrap(),
+            module: content.get("module").unwrap().parse::<i32>().unwrap(),
+            parameter: content.get("parameter").unwrap().to_string(),
+            at: content.get("at").unwrap().to_string(),
+            seconds: content.get("seconds").unwrap().parse::<u32>().unwrap(),
+            minutes: content.get("minutes").unwrap().parse::<u32>().unwrap(),
+            hours: content.get("hours").unwrap().parse::<u32>().unwrap(),
+            days: content.get("days").unwrap().to_string(),
+            repeat: content.get("repeat").unwrap().parse::<bool>().unwrap(),
+        };
+        let result = Database::add_task(&task);
+        if !result.is_none() {
+            // TODO load task
+        }
+        result
+    }
+
+    pub fn update_task(&mut self, content: &String) -> Option<i32> {
+        let content: HashMap<String, String> = serde_json::from_str(&*content).unwrap_or(HashMap::new());
+        let task = ScheduledTask {
+            id: content.get("id").unwrap().parse::<i32>().unwrap(),
+            module: content.get("module").unwrap().parse::<i32>().unwrap(),
+            parameter: content.get("parameter").unwrap().to_string(),
+            at: content.get("at").unwrap().to_string(),
+            seconds: content.get("seconds").unwrap().parse::<u32>().unwrap(),
+            minutes: content.get("minutes").unwrap().parse::<u32>().unwrap(),
+            hours: content.get("hours").unwrap().parse::<u32>().unwrap(),
+            days: content.get("days").unwrap().to_string(),
+            repeat: content.get("repeat").unwrap().parse::<bool>().unwrap(),
+        };
+        let result = Database::update_task(&task);
+        if !result.is_ok() {
+            // TODO reload task
+            return Some(result.unwrap() as i32)
+        }
+        None
+    }
+
+    pub fn rm_task(&mut self, id: &i32) -> Option<i32> {
+        let result = Database::rm_task(&id);
+        if !result.is_ok() {
+            // TODO remove task
+            return Some(result.unwrap() as i32)
+        }
+        None
     }
 
     fn load_tasks(&mut self) {
@@ -176,6 +199,7 @@ impl Scheduler {
                 Database::rm_task(&task.id);
                 continue;
             }
+            let module = module.unwrap();
 
             // TODO deserialize interaction?
             let metadatas: HashMap<String, String> = serde_json::from_str(&*task.parameter).unwrap_or(HashMap::new());
@@ -199,14 +223,12 @@ impl Scheduler {
                 datatype: String::new(),
                 time: time::now()
             };
-            let module = module.unwrap();
 
             info!("Scheduled new job for module {} with interaction {}", module.name, interaction);
             job.run(move || {
                 info!("Scheduler exec job for module {} with interaction {}", module.name, interaction);
                 module.exec(&interaction);
             });
-
         }
         // TODO only do one scheduler and run pending in another thread launched by manager
         self.handlers.push(scheduler.watch_thread(Duration::from_secs(1)));

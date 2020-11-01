@@ -34,6 +34,8 @@ use router::Router;
 use rori::manager::Manager;
 use rori::database::Database;
 use serde_json;
+use std::collections::HashMap;
+use std::io::Read;
 use std::sync::{Arc, Mutex};
 
 /**
@@ -74,14 +76,30 @@ impl API {
             manager: self.manager.clone()
         };
         let addr_handler = AddrHandler { };
+        let task_add_handler = TaskAddHandler {
+            manager: self.manager.clone()
+        };
+        let task_update_handler = TaskUpdateHandler {
+            manager: self.manager.clone()
+        };
+        let task_rm_handler = TaskRmHandler {
+            manager: self.manager.clone()
+        };
+        let task_search_handler = TaskSearchHandler { };
+        let module_handler = ModuleHandler { };
 
         router.get("/name/:name", name_handler, "name");
         router.get("/addr/:addr", addr_handler, "addr");
-
         // POST task/add {JSON}
+        router.post("task/add", task_add_handler, "task_add");
         // POST task/update {JSON}
+        router.post("task/update", task_update_handler, "task_update");
         // DELETE task/id
-        // GET task?name: String&device: String&user: String => {JSON}
+        router.delete("task/:id", task_rm_handler, "task_rm");
+        // POST task/search/name {JSON}
+        router.post("/task/search/:name", task_search_handler, "task_search");
+        // GET module/name
+        router.get("/module/:name", module_handler, "module");
         info!("start API endpoint at {}", self.address);
         // Start router
         Iron::new(router).http(&*self.address).unwrap();
@@ -89,7 +107,7 @@ impl API {
 }
 
 /**
- * Following classes are used for the RING compatible name server.
+ * Following classes are used for the Jami compatible name server.
  * See documentation here:
  * https://git.jami.net/savoirfairelinux/ring-project/wikis/technical/Name-Server-Protocol
  * For now, only the name endpoint is usefull
@@ -238,5 +256,223 @@ impl Handler for AddrHandler {
         };
         let response = serde_json::to_string(&answer).unwrap_or(String::new());
         Ok(Response::with((content_type, status::NotFound, response)))
+    }
+}
+
+/**
+ */
+struct TaskAddHandler {
+    manager: Arc<Mutex<Manager>>
+}
+
+/**
+ * Used if success name's query
+ */
+#[derive(Serialize, Deserialize)]
+struct TaskAddResponse {
+    id: i32,
+}
+
+/**
+ * Used if an error occurs
+ */
+#[derive(Serialize, Deserialize)]
+struct TaskAddError {
+    error: String,
+}
+
+impl Handler for TaskAddHandler {
+    fn handle(&self, request: &mut Request) -> IronResult<Response> {
+        let content_type = "application/json".parse::<Mime>().unwrap();
+        let mut body = String::new();
+        request.body.read_to_string(&mut body).unwrap();
+        info!("POST /task/add {}", body);
+        let mut manager = self.manager.lock().unwrap();
+        let result = manager.scheduler.add_task(&body);
+        match result {
+            Some(result) => {
+                let answer = TaskAddResponse { id: result };
+                let response = serde_json::to_string(&answer).unwrap_or(String::new());
+                return Ok(Response::with((content_type, status::Ok, response)));
+            },
+            _ => {
+                let answer = TaskAddError { error: String::from("Could not add task" )};
+                let response = serde_json::to_string(&answer).unwrap_or(String::new());
+                return Ok(Response::with((content_type, status::NotFound, response)));
+            }
+        };
+    }
+}
+
+/**
+ */
+struct TaskUpdateHandler {
+    manager: Arc<Mutex<Manager>>
+}
+
+/**
+ * Used if success name's query
+ */
+#[derive(Serialize, Deserialize)]
+struct TaskUpdateResponse {
+    id: i32,
+}
+
+/**
+ * Used if an error occurs
+ */
+#[derive(Serialize, Deserialize)]
+struct TaskUpdateError {
+    error: String,
+}
+
+impl Handler for TaskUpdateHandler {
+    fn handle(&self, request: &mut Request) -> IronResult<Response> {
+        let content_type = "application/json".parse::<Mime>().unwrap();
+        let mut body = String::new();
+        request.body.read_to_string(&mut body).unwrap();
+        info!("POST /task/update {}", body);
+        let mut manager = self.manager.lock().unwrap();
+        let result = manager.scheduler.update_task(&body);
+        match result {
+            Some(result) => {
+                let answer = TaskUpdateResponse { id: result };
+                let response = serde_json::to_string(&answer).unwrap_or(String::new());
+                return Ok(Response::with((content_type, status::Ok, response)));
+            },
+            _ => {
+                let answer = TaskUpdateError { error: String::from("Could not update task" )};
+                let response = serde_json::to_string(&answer).unwrap_or(String::new());
+                return Ok(Response::with((content_type, status::NotFound, response)));
+            }
+        };
+    }
+}
+
+/**
+ */
+struct TaskRmHandler {
+    manager: Arc<Mutex<Manager>>
+}
+
+/**
+ * Used if success name's query
+ */
+#[derive(Serialize, Deserialize)]
+struct TaskRmResponse {
+    id: i32,
+}
+
+/**
+ * Used if an error occurs
+ */
+#[derive(Serialize, Deserialize)]
+struct TaskRmError {
+    error: String,
+}
+
+impl Handler for TaskRmHandler {
+    fn handle(&self, request: &mut Request) -> IronResult<Response> {
+        let content_type = "application/json".parse::<Mime>().unwrap();
+        let id = request.extensions.get::<Router>().unwrap().find("id").unwrap_or("").parse::<i32>().unwrap_or(0);
+        info!("DELETE /task/{}", id);
+        let mut manager = self.manager.lock().unwrap();
+        let result = manager.scheduler.rm_task(&id);
+        match result {
+            Some(result) => {
+                let answer = TaskRmResponse { id: result };
+                let response = serde_json::to_string(&answer).unwrap_or(String::new());
+                return Ok(Response::with((content_type, status::Ok, response)));
+            },
+            _ => {
+                let answer = TaskRmError { error: String::from("Could not remove task" )};
+                let response = serde_json::to_string(&answer).unwrap_or(String::new());
+                return Ok(Response::with((content_type, status::NotFound, response)));
+            }
+        };
+    }
+}
+
+struct TaskSearchHandler { }
+
+/**
+ * Used if success TaskSearch's query
+ */
+#[derive(Serialize, Deserialize)]
+struct TaskSearchResponse {
+    id: i32,
+}
+
+/**
+ * Used if an error occurs
+ */
+#[derive(Serialize, Deserialize)]
+struct TaskSearchError {
+    error: String,
+}
+
+impl Handler for TaskSearchHandler {
+    fn handle(&self, request: &mut Request) -> IronResult<Response> {
+        let content_type = "application/json".parse::<Mime>().unwrap();
+        let name = request.extensions.get::<Router>().unwrap().find("name").unwrap_or("");
+        let mut body = String::new();
+        request.body.read_to_string(&mut body).unwrap();
+        info!("POST /task/search/{} {}", name, body);
+
+        let content: HashMap<String, String> = serde_json::from_str(&*body).unwrap_or(HashMap::new());
+        let result = Database::search_task(&String::from(name), content);
+        match result {
+            Some(result) => {
+                let answer = ModuleResponse { id: result.id };
+                let response = serde_json::to_string(&answer).unwrap_or(String::new());
+                return Ok(Response::with((content_type, status::Ok, response)));
+            },
+            _ => {
+                let answer = ModuleError { error: String::from("Could not get module" )};
+                let response = serde_json::to_string(&answer).unwrap_or(String::new());
+                return Ok(Response::with((content_type, status::NotFound, response)));
+            }
+        };
+    }
+}
+
+
+struct ModuleHandler { }
+
+/**
+ * Used if success Module's query
+ */
+#[derive(Serialize, Deserialize)]
+struct ModuleResponse {
+    id: i32,
+}
+
+/**
+ * Used if an error occurs
+ */
+#[derive(Serialize, Deserialize)]
+struct ModuleError {
+    error: String,
+}
+
+impl Handler for ModuleHandler {
+    fn handle(&self, request: &mut Request) -> IronResult<Response> {
+        let content_type = "application/json".parse::<Mime>().unwrap();
+        let name = request.extensions.get::<Router>().unwrap().find("name").unwrap_or("");
+        info!("GET /module/{}", name);
+
+        let result = Database::get_module_id_by_name(&String::from(name));
+        match result {
+            0 => {
+                let answer = ModuleError { error: String::from("Could not get module" )};
+                let response = serde_json::to_string(&answer).unwrap_or(String::new());
+                return Ok(Response::with((content_type, status::NotFound, response)));
+            }
+            result => {
+                let answer = ModuleResponse { id: result };
+                let response = serde_json::to_string(&answer).unwrap_or(String::new());
+                return Ok(Response::with((content_type, status::Ok, response)));
+            },
+        };
     }
 }

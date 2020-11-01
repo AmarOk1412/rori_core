@@ -604,7 +604,7 @@ impl Database {
             Ok(id) => {
                 return Some(id as i32);
             }
-            Err(e) => {
+            Err(_) => {
                 return None;
             }
         }
