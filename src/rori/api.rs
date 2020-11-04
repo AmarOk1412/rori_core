@@ -32,6 +32,7 @@ use iron::mime::Mime;
 use iron::status;
 use router::Router;
 use rori::manager::Manager;
+use rori::scheduler::Scheduler;
 use rori::database::Database;
 use serde_json;
 use std::collections::HashMap;
@@ -46,7 +47,8 @@ use std::sync::{Arc, Mutex};
  */
 pub struct API {
     address: String,
-    manager: Arc<Mutex<Manager>>
+    scheduler: Arc<Mutex<Scheduler>>,
+    manager: Arc<Mutex<Manager>>,
 }
 
 impl API {
@@ -61,6 +63,7 @@ impl API {
     pub fn new(manager: Arc<Mutex<Manager>>, address: String) -> API {
         API {
             address: address,
+            scheduler: Arc::new(Mutex::new(Scheduler::new())),
             manager: manager
         }
     }
@@ -77,13 +80,13 @@ impl API {
         };
         let addr_handler = AddrHandler { };
         let task_add_handler = TaskAddHandler {
-            manager: self.manager.clone()
+            scheduler: self.scheduler.clone()
         };
         let task_update_handler = TaskUpdateHandler {
-            manager: self.manager.clone()
+            scheduler: self.scheduler.clone()
         };
         let task_rm_handler = TaskRmHandler {
-            manager: self.manager.clone()
+            scheduler: self.scheduler.clone()
         };
         let task_search_handler = TaskSearchHandler { };
         let module_handler = ModuleHandler { };
@@ -262,7 +265,7 @@ impl Handler for AddrHandler {
 /**
  */
 struct TaskAddHandler {
-    manager: Arc<Mutex<Manager>>
+    scheduler: Arc<Mutex<Scheduler>>,
 }
 
 /**
@@ -287,8 +290,7 @@ impl Handler for TaskAddHandler {
         let mut body = String::new();
         request.body.read_to_string(&mut body).unwrap();
         info!("POST /task/add {}", body);
-        let mut manager = self.manager.lock().unwrap();
-        let result = manager.scheduler.add_task(&body);
+        let result = self.scheduler.lock().unwrap().add_task(&body);
         match result {
             Some(result) => {
                 let answer = TaskAddResponse { id: result };
@@ -307,7 +309,7 @@ impl Handler for TaskAddHandler {
 /**
  */
 struct TaskUpdateHandler {
-    manager: Arc<Mutex<Manager>>
+    scheduler: Arc<Mutex<Scheduler>>,
 }
 
 /**
@@ -332,8 +334,7 @@ impl Handler for TaskUpdateHandler {
         let mut body = String::new();
         request.body.read_to_string(&mut body).unwrap();
         info!("POST /task/update {}", body);
-        let mut manager = self.manager.lock().unwrap();
-        let result = manager.scheduler.update_task(&body);
+        let result = self.scheduler.lock().unwrap().update_task(&body);
         match result {
             Some(result) => {
                 let answer = TaskUpdateResponse { id: result };
@@ -352,7 +353,7 @@ impl Handler for TaskUpdateHandler {
 /**
  */
 struct TaskRmHandler {
-    manager: Arc<Mutex<Manager>>
+    scheduler: Arc<Mutex<Scheduler>>,
 }
 
 /**
@@ -376,8 +377,7 @@ impl Handler for TaskRmHandler {
         let content_type = "application/json".parse::<Mime>().unwrap();
         let id = request.extensions.get::<Router>().unwrap().find("id").unwrap_or("").parse::<i32>().unwrap_or(0);
         info!("DELETE /task/{}", id);
-        let mut manager = self.manager.lock().unwrap();
-        let result = manager.scheduler.rm_task(&id);
+        let result = self.scheduler.lock().unwrap().rm_task(&id);
         match result {
             Some(result) => {
                 let answer = TaskRmResponse { id: result };

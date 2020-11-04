@@ -102,11 +102,6 @@ print('add news module')
 arguments = '("news", 2, 1, "plain/text", "open.+news", "command/news")'
 c.execute('INSERT INTO modules (name, priority, enabled, type, condition, path) VALUES' + arguments)
 
-# command/news
-print('add feed module')
-arguments = '("feed", 2, 1, "plain/text", "$", "command/feed")'
-c.execute('INSERT INTO modules (name, priority, enabled, type, condition, path) VALUES' + arguments)
-
 # music/music_start
 print('add music_start module')
 arguments = '("music_start", 1, 1, "plain/text", "^(musi(c|que) ?!?)|((play|lance|joue).{1,30}(musi(c|que) ?!?))$", "music/start")'
@@ -130,6 +125,21 @@ c.execute('INSERT INTO modules (name, priority, enabled, type, condition, path) 
 # music/music_previous
 print('add music_previous module')
 arguments = '("music_previous", 1, 1, "plain/text", "^previous.{1,8}musi(c|que)", "music/previous")'
+c.execute('INSERT INTO modules (name, priority, enabled, type, condition, path) VALUES' + arguments)
+
+# command/feed/parse
+print('add parse_feed module')
+arguments = '("parse_feed", 2, 0, "plain/text", "$", "command/feed/parse")'
+c.execute('INSERT INTO modules (name, priority, enabled, type, condition, path) VALUES' + arguments)
+
+# command/feed/add
+print('add add_feed module')
+arguments = '("add_feed", 2, 1, "plain/text", "(follow|add) .+rss", "command/feed/add")'
+c.execute('INSERT INTO modules (name, priority, enabled, type, condition, path) VALUES' + arguments)
+
+# command/feed/rm
+print('add rm_feed module')
+arguments = '("rm_feed", 2, 1, "plain/text", "rm.+/rss", "command/feed/rm")'
 c.execute('INSERT INTO modules (name, priority, enabled, type, condition, path) VALUES' + arguments)
 
 conn.commit()

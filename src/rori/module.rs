@@ -108,7 +108,7 @@ impl Module {
             return true;
         }
         let continue_processing = continue_processing.unwrap().extract(py);
-        if continue_processing.is_ok() {
+        if !continue_processing.is_ok() {
             error!("Error while getting result for module {}", self.name);
             return true;
         }

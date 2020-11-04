@@ -39,6 +39,6 @@ ENV LC_ALL en_US.UTF-8
 
 # Install rori_modules dependencies
 RUN apt-get -y install python3-pip
-RUN pip3 install wikipedia feedparser --user
+RUN pip3 install wikipedia feedparser appdirs --user
 
 CMD ["/bin/bash", "scripts/launch-rori.sh"]

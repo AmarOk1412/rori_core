@@ -55,7 +55,7 @@ Please, see [wiki](https://github.com/AmarOk1412/rori_core/wiki/)
 5. `libncurses` for the UI
 6. `openssl` to generate keys for the API
 7. `python > 3.6` for modules.
-8. `pip3` and modules: `wikipedia`
+8. `pip3` and modules: `wikipedia feedparser appdirs`
 
 ## Run your instance
 

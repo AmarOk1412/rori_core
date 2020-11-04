@@ -78,7 +78,7 @@ impl Scheduler {
             minutes: content.get("minutes").unwrap().parse::<u32>().unwrap(),
             hours: content.get("hours").unwrap().parse::<u32>().unwrap(),
             days: content.get("days").unwrap().to_string(),
-            repeat: content.get("repeat").unwrap().parse::<bool>().unwrap(),
+            repeat: content.get("repeat").unwrap() == "True",
         };
         let result = Database::add_task(&task);
         if !result.is_none() {
@@ -210,14 +210,14 @@ impl Scheduler {
                 continue;
             }
 
-            let devices = Database::get_devices_for_hash(&metadatas["user"]);
-            if devices.is_empty() {
+            let device = Database::get_device(&metadatas["ring_id"], &metadatas["username"]);
+            if device.0 == -1 {
                 warn!("Remove task {} with id {} because no device were found", module.name, task.id);
                 Database::rm_task(&task.id);
                 continue;
             }
             let interaction = Interaction {
-                device_author: Device::new(&devices[0].0, &devices[0].1),
+                device_author: Device::new(&device.0, &device.1),
                 body: String::new(),
                 metadatas: metadatas,
                 datatype: String::new(),
