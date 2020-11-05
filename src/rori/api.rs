@@ -263,13 +263,14 @@ impl Handler for AddrHandler {
 }
 
 /**
+ * Used to add tasks to the scheduler
  */
 struct TaskAddHandler {
     scheduler: Arc<Mutex<Scheduler>>,
 }
 
 /**
- * Used if success name's query
+ * Used if task is added with success
  */
 #[derive(Serialize, Deserialize)]
 struct TaskAddResponse {
@@ -307,13 +308,14 @@ impl Handler for TaskAddHandler {
 }
 
 /**
+ * Used to update tasks to the scheduler
  */
 struct TaskUpdateHandler {
     scheduler: Arc<Mutex<Scheduler>>,
 }
 
 /**
- * Used if success name's query
+ * Used if the task is updated with success
  */
 #[derive(Serialize, Deserialize)]
 struct TaskUpdateResponse {
@@ -351,13 +353,14 @@ impl Handler for TaskUpdateHandler {
 }
 
 /**
+ * Used to remove a task from the scheduler
  */
 struct TaskRmHandler {
     scheduler: Arc<Mutex<Scheduler>>,
 }
 
 /**
- * Used if success name's query
+ * Used if the task is deleted with success
  */
 #[derive(Serialize, Deserialize)]
 struct TaskRmResponse {
@@ -393,10 +396,13 @@ impl Handler for TaskRmHandler {
     }
 }
 
+/**
+ * Used to search a task
+ */
 struct TaskSearchHandler { }
 
 /**
- * Used if success TaskSearch's query
+ * Used if the task is found
  */
 #[derive(Serialize, Deserialize)]
 struct TaskSearchResponse {
@@ -436,7 +442,9 @@ impl Handler for TaskSearchHandler {
     }
 }
 
-
+/**
+ * Used to search a module
+ */
 struct ModuleHandler { }
 
 /**
