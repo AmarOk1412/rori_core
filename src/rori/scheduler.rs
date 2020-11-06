@@ -40,6 +40,7 @@ use std::thread;
  * Represents a task for the schedule
  * @note may be simplified in the future if we supports cron format
  */
+#[derive(PartialEq)]
 pub struct ScheduledTask {
     pub id : i32,
     pub module : i32,

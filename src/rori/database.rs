@@ -630,14 +630,14 @@ impl Database {
      */
     pub fn update_task(task: &ScheduledTask) -> Result<usize, rusqlite::Error> {
         let conn = rusqlite::Connection::open("rori.db").unwrap();
-        let mut stmt = conn.prepare("UPDATE devices SET module=:module, \
+        let mut stmt = conn.prepare("UPDATE scheduler SET module=:module, \
                                                         parameter=:parameter, \
                                                         at=:at, \
                                                         seconds=:seconds, \
                                                         minutes=:minutes, \
                                                         hours=:hours, \
                                                         days=:days, \
-                                                        repeat=:repeat, \
+                                                        repeat=:repeat \
                                                         WHERE id=:id").unwrap();
         stmt.execute_named(&[(":id", &task.id),
                              (":module", &task.module),

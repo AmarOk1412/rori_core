@@ -2,6 +2,8 @@ extern crate core;
 #[cfg(test)]
 mod tests_database {
     use core::rori::database::Database;
+    use core::rori::scheduler::ScheduledTask;
+    use std::collections::HashMap;
     use std::fs;
 
     fn setup() {
@@ -313,4 +315,487 @@ mod tests_database {
         assert!(datatypes[2] == String::from("foo"));
         teardown();
     }
+
+    #[test]
+    fn test_get_module() {
+        setup();
+        // Insert module foo
+        let conn = rusqlite::Connection::open("rori.db").unwrap();
+        let row = conn.execute("INSERT INTO modules (name, priority, enabled, type, condition, path)
+                                VALUES (\"foo\", 1, 1, \"foo\", \"foo\", \"foo\")", rusqlite::NO_PARAMS);
+        assert!(row.is_ok());
+        // Get foo in modules
+        let module = Database::get_module(&(row.unwrap() as i32));
+        assert!(!module.is_none());
+        assert!(module.unwrap().name == String::from("foo"));
+        teardown();
+    }
+
+    #[test]
+    fn test_get_module_fail() {
+        setup();
+        // Get foo in modules
+        let module = Database::get_module(&1);
+        assert!(module.is_none());
+        teardown();
+    }
+
+    #[test]
+    fn test_get_module_id_by_name() {
+        setup();
+        // Insert module foo
+        let conn = rusqlite::Connection::open("rori.db").unwrap();
+        let row = conn.execute("INSERT INTO modules (name, priority, enabled, type, condition, path)
+                                VALUES (\"foo\", 1, 1, \"foo\", \"foo\", \"foo\")", rusqlite::NO_PARAMS);
+        assert!(row.is_ok());
+        // Get foo in modules
+        let module = Database::get_module_id_by_name(&String::from("foo"));
+        assert!(module != 0);
+        assert!(module == row.unwrap() as i32);
+        teardown();
+    }
+
+    #[test]
+    fn test_get_module_id_by_name_fail() {
+        setup();
+        // Get foo in modules
+        let module = Database::get_module_id_by_name(&String::from("foo"));
+        assert!(module == 0);
+        teardown();
+    }
+
+    #[test]
+    fn test_get_tasks_no_tasks() {
+        setup();
+        // test get tasks no task
+        let tasks = Database::get_tasks();
+        assert!(tasks.len() == 0);
+        teardown();
+    }
+
+    #[test]
+    fn test_add_get_tasks() {
+        setup();
+        // Insert module foo
+        let conn = rusqlite::Connection::open("rori.db").unwrap();
+        let row = conn.execute("INSERT INTO modules (name, priority, enabled, type, condition, path)
+                                VALUES (\"foo\", 1, 1, \"foo\", \"foo\", \"foo\")", rusqlite::NO_PARAMS);
+        let module_id = row.unwrap() as i32;
+        let task1 = ScheduledTask {
+            id : 0,
+            module : module_id,
+            parameter : String::new(),
+            at : String::new(),
+            seconds : 0,
+            minutes : 0,
+            hours : 0,
+            days : String::new(),
+            repeat : false
+        };
+        let task2 = ScheduledTask {
+            id : 0,
+            module : module_id,
+            parameter : String::new(),
+            at : String::new(),
+            seconds : 1,
+            minutes : 2,
+            hours : 0,
+            days : String::new(),
+            repeat : false
+        };
+        Database::add_task(&task1);
+        Database::add_task(&task2);
+        // test get tasks
+        let tasks = Database::get_tasks();
+        assert!(tasks.len() == 2);
+        assert!(tasks[0].seconds == task1.seconds);
+        assert!(tasks[1].seconds == task2.seconds);
+        teardown();
+    }
+
+    #[test]
+    fn test_get_task() {
+        setup();
+        // Insert module foo
+        let conn = rusqlite::Connection::open("rori.db").unwrap();
+        let row = conn.execute("INSERT INTO modules (name, priority, enabled, type, condition, path)
+                                VALUES (\"foo\", 1, 1, \"foo\", \"foo\", \"foo\")", rusqlite::NO_PARAMS);
+        let module_id = row.unwrap() as i32;
+        let task1 = ScheduledTask {
+            id : 0,
+            module : module_id,
+            parameter : String::new(),
+            at : String::new(),
+            seconds : 0,
+            minutes : 0,
+            hours : 0,
+            days : String::new(),
+            repeat : false
+        };
+        let task2 = ScheduledTask {
+            id : 0,
+            module : module_id,
+            parameter : String::new(),
+            at : String::new(),
+            seconds : 1,
+            minutes : 2,
+            hours : 0,
+            days : String::new(),
+            repeat : false
+        };
+        Database::add_task(&task1);
+        Database::add_task(&task2);
+        // test get task
+        let task = Database::get_task(&1);
+        assert!(!task.is_none());
+        assert!(task.as_ref().unwrap().id == 1);
+        assert!(task.as_ref().unwrap().seconds == task1.seconds);
+        teardown();
+    }
+
+    #[test]
+    fn test_get_task_failed() {
+        setup();
+        // test get task fails
+        let task = Database::get_task(&1);
+        assert!(task.is_none());
+        teardown();
+    }
+
+    #[test]
+    fn test_search_no_parameter() {
+        setup();
+        // Insert module foo
+        let conn = rusqlite::Connection::open("rori.db").unwrap();
+        let row = conn.execute("INSERT INTO modules (name, priority, enabled, type, condition, path)
+                                VALUES (\"foo\", 1, 1, \"foo\", \"foo\", \"foo\")", rusqlite::NO_PARAMS);
+        let module_id = row.unwrap() as i32;
+        let task1 = ScheduledTask {
+            id : 0,
+            module : module_id,
+            parameter : String::from("{\"author\":\"foo\",\"param\":\"bar\"}"),
+            at : String::new(),
+            seconds : 56,
+            minutes : 0,
+            hours : 0,
+            days : String::new(),
+            repeat : false
+        };
+        Database::add_task(&task1);
+        // test get search task no parameter
+        let task = Database::search_task(&String::from("1"), HashMap::new());
+        assert!(!task.is_none());
+        assert!(task.as_ref().unwrap().id == 1);
+        assert!(task.as_ref().unwrap().seconds == task1.seconds);
+        teardown();
+    }
+
+    #[test]
+    fn test_search_sub_parameter() {
+        setup();
+        // Insert module foo
+        let conn = rusqlite::Connection::open("rori.db").unwrap();
+        let row = conn.execute("INSERT INTO modules (name, priority, enabled, type, condition, path)
+                                VALUES (\"foo\", 1, 1, \"foo\", \"foo\", \"foo\")", rusqlite::NO_PARAMS);
+        let module_id = row.unwrap() as i32;
+        let task1 = ScheduledTask {
+            id : 0,
+            module : module_id,
+            parameter : String::from("{\"author\":\"foo\",\"param\":\"bar\"}"),
+            at : String::new(),
+            seconds : 56,
+            minutes : 0,
+            hours : 0,
+            days : String::new(),
+            repeat : false
+        };
+        Database::add_task(&task1);
+        // test get search task sub parameter
+        let mut parameter = HashMap::new();
+        parameter.insert(String::from("author"), String::from("foo"));
+        let task = Database::search_task(&String::from("1"), parameter);
+        assert!(!task.is_none());
+        assert!(task.as_ref().unwrap().id == 1);
+        assert!(task.as_ref().unwrap().seconds == task1.seconds);
+        teardown();
+    }
+
+    #[test]
+    fn test_search_exact_parameter() {
+        setup();
+        // Insert module foo
+        let conn = rusqlite::Connection::open("rori.db").unwrap();
+        let row = conn.execute("INSERT INTO modules (name, priority, enabled, type, condition, path)
+                                VALUES (\"foo\", 1, 1, \"foo\", \"foo\", \"foo\")", rusqlite::NO_PARAMS);
+        let module_id = row.unwrap() as i32;
+        let task1 = ScheduledTask {
+            id : 0,
+            module : module_id,
+            parameter : String::from("{\"author\":\"foo\",\"param\":\"bar\"}"),
+            at : String::new(),
+            seconds : 56,
+            minutes : 0,
+            hours : 0,
+            days : String::new(),
+            repeat : false
+        };
+        Database::add_task(&task1);
+        // test get search task exact parameter
+        let mut parameter = HashMap::new();
+        parameter.insert(String::from("author"), String::from("foo"));
+        parameter.insert(String::from("param"), String::from("bar"));
+        let task = Database::search_task(&String::from("1"), parameter);
+        assert!(!task.is_none());
+        assert!(task.as_ref().unwrap().id == 1);
+        assert!(task.as_ref().unwrap().seconds == task1.seconds);
+        teardown();
+    }
+
+    #[test]
+    fn test_search_too_many_parameter() {
+        setup();
+        // Insert module foo
+        let conn = rusqlite::Connection::open("rori.db").unwrap();
+        let row = conn.execute("INSERT INTO modules (name, priority, enabled, type, condition, path)
+                                VALUES (\"foo\", 1, 1, \"foo\", \"foo\", \"foo\")", rusqlite::NO_PARAMS);
+        let module_id = row.unwrap() as i32;
+        let task1 = ScheduledTask {
+            id : 0,
+            module : module_id,
+            parameter : String::from("{\"author\":\"foo\",\"param\":\"bar\"}"),
+            at : String::new(),
+            seconds : 56,
+            minutes : 0,
+            hours : 0,
+            days : String::new(),
+            repeat : false
+        };
+        Database::add_task(&task1);
+        // test get search task too maty parameter
+        let mut parameter = HashMap::new();
+        parameter.insert(String::from("author"), String::from("foo"));
+        parameter.insert(String::from("param"), String::from("bar"));
+        parameter.insert(String::from("param2"), String::from("bar2"));
+        let task = Database::search_task(&String::from("1"), parameter);
+        assert!(task.is_none());
+        teardown();
+    }
+
+    #[test]
+    fn test_search_not_found() {
+        setup();
+        // Insert module foo
+        let conn = rusqlite::Connection::open("rori.db").unwrap();
+        let row = conn.execute("INSERT INTO modules (name, priority, enabled, type, condition, path)
+                                VALUES (\"foo\", 1, 1, \"foo\", \"foo\", \"foo\")", rusqlite::NO_PARAMS);
+        let module_id = row.unwrap() as i32;
+        let task1 = ScheduledTask {
+            id : 0,
+            module : module_id,
+            parameter : String::from("{\"author\":\"foo\",\"param\":\"bar\"}"),
+            at : String::new(),
+            seconds : 56,
+            minutes : 0,
+            hours : 0,
+            days : String::new(),
+            repeat : false
+        };
+        Database::add_task(&task1);
+        // test get search task not found
+        let mut parameter = HashMap::new();
+        parameter.insert(String::from("author"), String::from("foo"));
+        parameter.insert(String::from("param"), String::from("bar"));
+        let task = Database::search_task(&String::from("2"), parameter);
+        assert!(task.is_none());
+        teardown();
+    }
+
+    #[test]
+    fn test_search_not_found_param() {
+        setup();
+        // Insert module foo
+        let conn = rusqlite::Connection::open("rori.db").unwrap();
+        let row = conn.execute("INSERT INTO modules (name, priority, enabled, type, condition, path)
+                                VALUES (\"foo\", 1, 1, \"foo\", \"foo\", \"foo\")", rusqlite::NO_PARAMS);
+        let module_id = row.unwrap() as i32;
+        let task1 = ScheduledTask {
+            id : 0,
+            module : module_id,
+            parameter : String::from("{\"author\":\"foo\",\"param\":\"bar\"}"),
+            at : String::new(),
+            seconds : 56,
+            minutes : 0,
+            hours : 0,
+            days : String::new(),
+            repeat : false
+        };
+        Database::add_task(&task1);
+        // test get search task not found parameter
+        let mut parameter = HashMap::new();
+        parameter.insert(String::from("author"), String::from("bar"));
+        parameter.insert(String::from("param"), String::from("foo"));
+        let task = Database::search_task(&String::from("1"), parameter);
+        assert!(task.is_none());
+        teardown();
+    }
+
+    #[test]
+    fn test_update_task() {
+        setup();
+        // Insert module foo
+        let conn = rusqlite::Connection::open("rori.db").unwrap();
+        let row = conn.execute("INSERT INTO modules (name, priority, enabled, type, condition, path)
+                                VALUES (\"foo\", 1, 1, \"foo\", \"foo\", \"foo\")", rusqlite::NO_PARAMS);
+        let module_id = row.unwrap() as i32;
+        let task1 = ScheduledTask {
+            id : 0,
+            module : module_id,
+            parameter : String::new(),
+            at : String::new(),
+            seconds : 0,
+            minutes : 0,
+            hours : 0,
+            days : String::new(),
+            repeat : false
+        };
+        let task2 = ScheduledTask {
+            id : 0,
+            module : module_id,
+            parameter : String::new(),
+            at : String::new(),
+            seconds : 1,
+            minutes : 2,
+            hours : 0,
+            days : String::new(),
+            repeat : false
+        };
+        Database::add_task(&task1);
+        Database::add_task(&task2);
+        let task3 = ScheduledTask {
+            id : 1,
+            module : module_id,
+            parameter : String::new(),
+            at : String::new(),
+            seconds : 1,
+            minutes : 3,
+            hours : 4,
+            days : String::new(),
+            repeat : false
+        };
+        // test update task
+        let _ = Database::update_task(&task3);
+        let task_retrieven = Database::get_task(&1);
+        assert!(!task_retrieven.is_none());
+        assert!(task_retrieven.as_ref().unwrap().id == 1);
+        assert!(task_retrieven.unwrap().seconds == task3.seconds);
+        let tasks = Database::get_tasks();
+        assert!(tasks.len() == 2);
+        teardown();
+    }
+
+
+    #[test]
+    fn test_update_task_failed() {
+        setup();
+        // Insert module foo
+        let conn = rusqlite::Connection::open("rori.db").unwrap();
+        let row = conn.execute("INSERT INTO modules (name, priority, enabled, type, condition, path)
+                                VALUES (\"foo\", 1, 1, \"foo\", \"foo\", \"foo\")", rusqlite::NO_PARAMS);
+        let module_id = row.unwrap() as i32;
+        let task1 = ScheduledTask {
+            id : 0,
+            module : module_id,
+            parameter : String::new(),
+            at : String::new(),
+            seconds : 0,
+            minutes : 0,
+            hours : 0,
+            days : String::new(),
+            repeat : false
+        };
+        let task2 = ScheduledTask {
+            id : 0,
+            module : module_id,
+            parameter : String::new(),
+            at : String::new(),
+            seconds : 1,
+            minutes : 2,
+            hours : 0,
+            days : String::new(),
+            repeat : false
+        };
+        Database::add_task(&task1);
+        Database::add_task(&task2);
+        let task3 = ScheduledTask {
+            id : 196,
+            module : module_id,
+            parameter : String::new(),
+            at : String::new(),
+            seconds : 1,
+            minutes : 3,
+            hours : 4,
+            days : String::new(),
+            repeat : false
+        };
+        // test update task failed
+        let _ = Database::update_task(&task3);
+        let task_retrieven = Database::get_task(&1);
+        assert!(task_retrieven.as_ref().unwrap().id == 1);
+        assert!(task_retrieven.unwrap().seconds == 0);
+        let tasks = Database::get_tasks();
+        assert!(tasks.len() == 2);
+        teardown();
+    }
+
+    #[test]
+    fn test_rm_task() {
+        setup();
+        // Insert module foo
+        let conn = rusqlite::Connection::open("rori.db").unwrap();
+        let row = conn.execute("INSERT INTO modules (name, priority, enabled, type, condition, path)
+                                VALUES (\"foo\", 1, 1, \"foo\", \"foo\", \"foo\")", rusqlite::NO_PARAMS);
+        let module_id = row.unwrap() as i32;
+        let task1 = ScheduledTask {
+            id : 0,
+            module : module_id,
+            parameter : String::new(),
+            at : String::new(),
+            seconds : 0,
+            minutes : 0,
+            hours : 0,
+            days : String::new(),
+            repeat : false
+        };
+        let task2 = ScheduledTask {
+            id : 0,
+            module : module_id,
+            parameter : String::new(),
+            at : String::new(),
+            seconds : 1,
+            minutes : 2,
+            hours : 0,
+            days : String::new(),
+            repeat : false
+        };
+        let id1 = Database::add_task(&task1);
+        Database::add_task(&task2);
+        // test rm task
+        let task_rm = Database::rm_task(&id1.unwrap());
+        assert!(task_rm.is_ok());
+        assert!(task_rm.unwrap() as i32 == id1.unwrap());
+        let tasks = Database::get_tasks();
+        assert!(tasks.len() == 1);
+        assert!(tasks[0].seconds == task2.seconds);
+        teardown();
+    }
+
+    #[test]
+    fn test_rm_task_failed() {
+        setup();
+        // test rm task fails
+        let task = Database::rm_task(&1);
+        assert!(task.unwrap() == 0);
+        teardown();
+    }
+
 }
