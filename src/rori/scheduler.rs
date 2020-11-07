@@ -40,7 +40,7 @@ use std::thread;
  * Represents a task for the schedule
  * @note may be simplified in the future if we supports cron format
  */
-#[derive(PartialEq)]
+#[derive(Clone, Deserialize, PartialEq, Serialize)]
 pub struct ScheduledTask {
     pub id : i32,
     pub module : i32,
@@ -69,7 +69,9 @@ impl Drop for Scheduler {
     fn drop(&mut self) {
         self.jobs.lock().unwrap().clear();
         self.stop.store(true, Ordering::SeqCst);
-        let _ = self.thread.take().unwrap().join();
+        if !self.thread.is_none() {
+            let _ = self.thread.take().unwrap().join();
+        }
     }
 }
 
@@ -104,6 +106,19 @@ impl Scheduler {
         result
     }
 
+    pub fn no_thread() -> Scheduler {
+        let jobs = Arc::new(Mutex::new(HashMap::new()));
+        let stop = Arc::new(AtomicBool::new(false));
+        let mut result = Scheduler {
+            jobs,
+            stop,
+            thread: None,
+        };
+
+        result.load_tasks();
+        result
+    }
+
     /**
      * Add a task to the scheduler
      * @param self
@@ -112,17 +127,31 @@ impl Scheduler {
      */
     pub fn add_task(&mut self, content: &String) -> Option<i32> {
         let content: HashMap<String, String> = serde_json::from_str(&*content).unwrap_or(HashMap::new());
+        if !content.contains_key("id")
+        || !content.contains_key("module")
+        || !content.contains_key("parameter")
+        || !content.contains_key("at")
+        || !content.contains_key("seconds")
+        || !content.contains_key("minutes")
+        || !content.contains_key("hours")
+        || !content.contains_key("days")
+        || !content.contains_key("repeat") {
+            return None;
+        }
         let task = ScheduledTask {
-            id: content.get("id").unwrap().parse::<i32>().unwrap(),
-            module: content.get("module").unwrap().parse::<i32>().unwrap(),
+            id: content.get("id").unwrap().parse::<i32>().unwrap_or(-1),
+            module: content.get("module").unwrap().parse::<i32>().unwrap_or(0),
             parameter: content.get("parameter").unwrap().to_string(),
             at: content.get("at").unwrap().to_string(),
-            seconds: content.get("seconds").unwrap().parse::<u32>().unwrap(),
-            minutes: content.get("minutes").unwrap().parse::<u32>().unwrap(),
-            hours: content.get("hours").unwrap().parse::<u32>().unwrap(),
+            seconds: content.get("seconds").unwrap().parse::<u32>().unwrap_or(0),
+            minutes: content.get("minutes").unwrap().parse::<u32>().unwrap_or(0),
+            hours: content.get("hours").unwrap().parse::<u32>().unwrap_or(0),
             days: content.get("days").unwrap().to_string(),
-            repeat: content.get("repeat").unwrap() == "True",
+            repeat: content.get("repeat").unwrap_or(&String::new()) == "True",
         };
+        if task.id < 0 {
+            return None;
+        }
         let result = Database::add_task(&task);
         if !result.is_none() {
             self.load_task(task);
@@ -138,17 +167,31 @@ impl Scheduler {
      */
     pub fn update_task(&mut self, content: &String) -> Option<i32> {
         let content: HashMap<String, String> = serde_json::from_str(&*content).unwrap_or(HashMap::new());
+        if !content.contains_key("id")
+        || !content.contains_key("module")
+        || !content.contains_key("parameter")
+        || !content.contains_key("at")
+        || !content.contains_key("seconds")
+        || !content.contains_key("minutes")
+        || !content.contains_key("hours")
+        || !content.contains_key("days")
+        || !content.contains_key("repeat") {
+            return None;
+        }
         let task = ScheduledTask {
-            id: content.get("id").unwrap().parse::<i32>().unwrap(),
-            module: content.get("module").unwrap().parse::<i32>().unwrap(),
+            id: content.get("id").unwrap().parse::<i32>().unwrap_or(-1),
+            module: content.get("module").unwrap().parse::<i32>().unwrap_or(0),
             parameter: content.get("parameter").unwrap().to_string(),
             at: content.get("at").unwrap().to_string(),
-            seconds: content.get("seconds").unwrap().parse::<u32>().unwrap(),
-            minutes: content.get("minutes").unwrap().parse::<u32>().unwrap(),
-            hours: content.get("hours").unwrap().parse::<u32>().unwrap(),
+            seconds: content.get("seconds").unwrap().parse::<u32>().unwrap_or(0),
+            minutes: content.get("minutes").unwrap().parse::<u32>().unwrap_or(0),
+            hours: content.get("hours").unwrap().parse::<u32>().unwrap_or(0),
             days: content.get("days").unwrap().to_string(),
-            repeat: content.get("repeat").unwrap().parse::<bool>().unwrap(),
+            repeat: content.get("repeat").unwrap_or(&String::new()) == "True",
         };
+        if task.id < 0 {
+            return None;
+        }
         let result = Database::update_task(&task);
         if !result.is_ok() {
             self.load_task(task);
@@ -275,7 +318,7 @@ impl Scheduler {
         }
         let module = module.unwrap();
         let metadatas: HashMap<String, String> = serde_json::from_str(&*task.parameter).unwrap_or(HashMap::new());
-        if metadatas.is_empty() {
+        if metadatas.is_empty() || !metadatas.contains_key("ring_id") || !metadatas.contains_key("username") {
             warn!("Remove task {} with id {} because no parameters were specified", module.name, task.id);
             let _ = Database::rm_task(&task.id);
             return;
