@@ -89,9 +89,11 @@ impl Scheduler {
                 if stop_cloned.load(Ordering::SeqCst) {
                     return;
                 }
-                let jobs: &mut HashMap<i32, clokwerk::Scheduler> = &mut cloned.lock().unwrap();
-                for (_id, job) in jobs.into_iter() {
-                    job.run_pending();
+                {
+                    let jobs: &mut HashMap<i32, clokwerk::Scheduler> = &mut cloned.lock().unwrap();
+                    for (_id, job) in jobs.into_iter() {
+                        job.run_pending();
+                    }
                 }
                 thread::sleep(Duration::from_secs(1));
             }
@@ -100,19 +102,6 @@ impl Scheduler {
             jobs,
             stop,
             thread,
-        };
-
-        result.load_tasks();
-        result
-    }
-
-    pub fn no_thread() -> Scheduler {
-        let jobs = Arc::new(Mutex::new(HashMap::new()));
-        let stop = Arc::new(AtomicBool::new(false));
-        let mut result = Scheduler {
-            jobs,
-            stop,
-            thread: None,
         };
 
         result.load_tasks();
@@ -193,9 +182,10 @@ impl Scheduler {
             return None;
         }
         let result = Database::update_task(&task);
-        if !result.is_ok() {
+        if result.is_ok() && result.unwrap() != 0 {
+            let id = task.id;
             self.load_task(task);
-            return Some(result.unwrap() as i32)
+            return Some(id)
         }
         None
     }
@@ -208,10 +198,10 @@ impl Scheduler {
      */
     pub fn rm_task(&mut self, id: &i32) -> Option<i32> {
         let result = Database::rm_task(&id);
-        if result.is_ok() {
+        if result.is_ok() && result.unwrap() != 0 {
             let jobs: &mut HashMap<i32, clokwerk::Scheduler> = &mut self.jobs.lock().unwrap();
             jobs.retain(|jid, _| jid == id);
-            return Some(result.unwrap() as i32)
+            return Some(id.clone())
         }
         None
     }

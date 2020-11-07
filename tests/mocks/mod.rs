@@ -79,7 +79,7 @@ impl Daemon {
         let configuration_path = "/cx/ring/Ring/ConfigurationManager";
         let configuration_iface = "cx.ring.Ring.ConfigurationManager";
         connection.register_name(ring_dbus, NameFlag::ReplaceExisting as u32).unwrap();
-        let f = Factory::new_fn::<(TData)>();
+        let f = Factory::new_fn::<TData>();
 
         let incoming_trust_request = Some(Arc::new(
             f.signal("incomingTrustRequest", ())

@@ -47,7 +47,7 @@ mod tests_scheduler {
         };
         Database::add_task(&task1);
         Database::add_task(&task2);
-        Scheduler::no_thread();
+        Scheduler::new();
         let tasks = Database::get_tasks();
         assert!(tasks.len() == 2);
         teardown();
@@ -82,7 +82,7 @@ mod tests_scheduler {
         };
         Database::add_task(&task1);
         Database::add_task(&task2);
-        Scheduler::no_thread();
+        Scheduler::new();
         let tasks = Database::get_tasks();
         assert!(tasks.len() == 0);
         teardown();
@@ -120,7 +120,7 @@ mod tests_scheduler {
         };
         Database::add_task(&task1);
         Database::add_task(&task2);
-        Scheduler::no_thread();
+        Scheduler::new();
         let tasks = Database::get_tasks();
         assert!(tasks.len() == 0);
         teardown();
@@ -157,7 +157,7 @@ mod tests_scheduler {
         };
         Database::add_task(&task1);
         Database::add_task(&task2);
-        Scheduler::no_thread();
+        Scheduler::new();
         let tasks = Database::get_tasks();
         assert!(tasks.len() == 0);
         teardown();
@@ -181,7 +181,7 @@ mod tests_scheduler {
         task1.insert(String::from("hours"), String::from("0"));
         task1.insert(String::from("days"), String::new());
         task1.insert(String::from("repeat"), String::from("True"));
-        let mut scheduler = Scheduler::no_thread();
+        let mut scheduler = Scheduler::new();
         let task1 = serde_json::to_string(&task1).unwrap_or(String::new());
         scheduler.add_task(&task1);
         let tasks = Database::get_tasks();
@@ -206,7 +206,7 @@ mod tests_scheduler {
         task1.insert(String::from("hours"), String::from("0"));
         task1.insert(String::from("days"), String::new());
         task1.insert(String::from("repeat"), String::from("True"));
-        let mut scheduler = Scheduler::no_thread();
+        let mut scheduler = Scheduler::new();
         let task1 = serde_json::to_string(&task1).unwrap_or(String::new());
         scheduler.add_task(&task1);
         let tasks = Database::get_tasks();
@@ -234,7 +234,7 @@ mod tests_scheduler {
             repeat : false
         };
         Database::add_task(&task1);
-        let mut scheduler = Scheduler::no_thread();
+        let mut scheduler = Scheduler::new();
         let pre_update_task = Database::get_tasks()[0].clone();
 
         let mut task1 = HashMap::new();
@@ -277,7 +277,7 @@ mod tests_scheduler {
             repeat : false
         };
         Database::add_task(&task1);
-        let mut scheduler = Scheduler::no_thread();
+        let mut scheduler = Scheduler::new();
         let pre_update_task = Database::get_tasks()[0].clone();
 
         let mut task1 = HashMap::new();
@@ -319,7 +319,7 @@ mod tests_scheduler {
             repeat : false
         };
         Database::add_task(&task1);
-        let mut scheduler = Scheduler::no_thread();
+        let mut scheduler = Scheduler::new();
         let pre_update_task = Database::get_tasks()[0].clone();
 
         let mut task1 = HashMap::new();
@@ -374,7 +374,7 @@ mod tests_scheduler {
         };
         Database::add_task(&task1);
         Database::add_task(&task2);
-        let mut scheduler = Scheduler::no_thread();
+        let mut scheduler = Scheduler::new();
         let result = scheduler.rm_task(&1);
         assert!(!result.is_none());
         let tasks = Database::get_tasks();
@@ -415,7 +415,7 @@ mod tests_scheduler {
         };
         Database::add_task(&task1);
         Database::add_task(&task2);
-        let mut scheduler = Scheduler::no_thread();
+        let mut scheduler = Scheduler::new();
         scheduler.rm_task(&1412);
         let tasks = Database::get_tasks();
         assert!(tasks.len() == 2);
